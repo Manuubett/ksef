@@ -1,0 +1,1418 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kenya Music Festival — Adjudication System</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+:root{
+  --gold:#C9A84C;--gold-light:#E8C96A;--gold-dark:#8B6914;
+  --deep:#0A0D14;--surface:#111520;--card:#171D2E;
+  --border:rgba(201,168,76,0.18);--text:#EEE8D5;--muted:#7A7E8A;
+  --green:#3ECF8E;--red:#F87171;--blue:#60A5FA;
+  --purple:#A78BFA;--orange:#FB923C;--pink:#F472B6;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--deep);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;
+  background-image:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(201,168,76,0.07) 0%,transparent 60%),
+  url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23C9A84C' fill-opacity='0.025'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");}
+.hidden{display:none!important;}
+.btn{padding:0.6rem 1.3rem;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.875rem;font-weight:500;transition:all 0.2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-primary{background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:var(--deep);font-weight:700;}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(201,168,76,0.35);}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+.btn-danger{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:var(--red);}
+.btn-success{background:rgba(62,207,142,0.1);border:1px solid rgba(62,207,142,0.3);color:var(--green);}
+.btn-blue{background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.3);color:var(--blue);}
+.btn-purple{background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:var(--purple);}
+.btn-sm{padding:4px 12px;font-size:0.78rem;}
+.btn:disabled{opacity:0.4;cursor:not-allowed;transform:none!important;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-group label{font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;}
+.form-control{background:#0D1018;border:1px solid var(--border);border-radius:8px;padding:0.65rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;transition:border-color 0.2s;outline:none;width:100%;}
+.form-control:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,0.1);}
+select.form-control option{background:#0D1018;}
+textarea.form-control{resize:vertical;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:8px;}
+.card-title{font-weight:600;font-size:0.95rem;}
+.badge{display:inline-block;font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:0.05em;}
+.badge-gold{background:rgba(201,168,76,0.15);color:var(--gold);}
+.badge-green{background:rgba(62,207,142,0.15);color:var(--green);}
+.badge-blue{background:rgba(96,165,250,0.15);color:var(--blue);}
+.badge-red{background:rgba(248,113,113,0.15);color:var(--red);}
+.badge-orange{background:rgba(251,146,60,0.15);color:var(--orange);}
+.badge-purple{background:rgba(167,139,250,0.15);color:var(--purple);}
+.status-pending{background:rgba(251,146,60,0.15);color:var(--orange);}
+.status-approved{background:rgba(96,165,250,0.15);color:var(--blue);}
+.status-rejected{background:rgba(248,113,113,0.15);color:var(--red);}
+.status-scored{background:rgba(62,207,142,0.15);color:var(--green);}
+.score-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-family:'DM Mono',monospace;font-size:0.8rem;font-weight:600;}
+.pill-gold{background:rgba(201,168,76,0.15);color:var(--gold);}
+.pill-green{background:rgba(62,207,142,0.15);color:var(--green);}
+.pill-blue{background:rgba(96,165,250,0.15);color:var(--blue);}
+.pill-red{background:rgba(248,113,113,0.15);color:var(--red);}
+.loading{display:flex;align-items:center;justify-content:center;padding:3rem;gap:12px;color:var(--muted);}
+.spinner{width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:3rem 1rem;color:var(--muted);}
+.empty-icon{font-size:2.5rem;margin-bottom:0.8rem;opacity:0.35;}
+.page{display:none;}
+.page.active{display:block;animation:fadeIn 0.3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.seg-tabs{display:flex;background:#0D1018;border-radius:10px;padding:4px;gap:4px;margin-bottom:1.4rem;flex-wrap:wrap;}
+.seg-tab{flex:1;padding:0.45rem 0.8rem;border-radius:7px;border:none;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:0.8rem;cursor:pointer;transition:all 0.2s;text-align:center;min-width:60px;}
+.seg-tab.active{background:var(--card);color:var(--gold);border:1px solid var(--border);}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.2rem;}
+.grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1rem;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:0.84rem;}
+thead th{text-align:left;padding:0.65rem 1rem;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);border-bottom:1px solid var(--border);background:rgba(201,168,76,0.04);}
+tbody tr{border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.15s;}
+tbody tr:hover{background:rgba(255,255,255,0.02);}
+tbody td{padding:0.8rem 1rem;vertical-align:middle;}
+.td-mono{font-family:'DM Mono',monospace;font-size:0.78rem;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.4rem;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.gold::before{background:linear-gradient(90deg,var(--gold),transparent);}
+.stat-card.green::before{background:linear-gradient(90deg,var(--green),transparent);}
+.stat-card.blue::before{background:linear-gradient(90deg,var(--blue),transparent);}
+.stat-card.red::before{background:linear-gradient(90deg,var(--red),transparent);}
+.stat-card.orange::before{background:linear-gradient(90deg,var(--orange),transparent);}
+.stat-card.purple::before{background:linear-gradient(90deg,var(--purple),transparent);}
+.stat-value{font-family:'DM Mono',monospace;font-size:1.9rem;font-weight:500;margin-bottom:3px;}
+.stat-label{font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;}
+.stat-icon{position:absolute;top:0.9rem;right:1.1rem;font-size:1.4rem;opacity:0.25;}
+.toast-container{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1.1rem;display:flex;align-items:center;gap:10px;font-size:0.84rem;min-width:250px;animation:slideIn 0.3s ease;box-shadow:0 8px 30px rgba(0,0,0,0.4);}
+@keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast.success{border-left:3px solid var(--green);}
+.toast.error{border-left:3px solid var(--red);}
+.toast.info{border-left:3px solid var(--gold);}
+.app-header{background:linear-gradient(135deg,#0B0F1A,#141B2E);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.logo-icon.admin-icon{background:linear-gradient(135deg,var(--purple),#7C3AED);}
+.logo-icon.adj-icon{background:linear-gradient(135deg,var(--blue),#1D4ED8);}
+.logo-icon.gold-icon{background:linear-gradient(135deg,var(--gold),var(--gold-dark));}
+.logo-text h1{font-family:'Playfair Display',serif;font-size:1rem;color:var(--gold);line-height:1;}
+.logo-text p{font-size:0.65rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;}
+.portal-label{font-size:0.68rem;font-weight:700;padding:3px 11px;border-radius:20px;text-transform:uppercase;letter-spacing:0.08em;}
+.portal-admin{background:rgba(167,139,250,0.15);color:var(--purple);}
+.portal-adj{background:rgba(96,165,250,0.15);color:var(--blue);}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.user-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:5px 12px;}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.shell-layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 64px);}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.4rem 0;overflow-y:auto;}
+.sidebar-section{padding:0 1rem 1rem;}
+.sidebar-label{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.14em;color:var(--gold);font-weight:700;margin-bottom:0.6rem;padding:0 0.3rem;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:0.55rem 0.8rem;border-radius:8px;cursor:pointer;transition:all 0.2s;font-size:0.84rem;color:var(--muted);margin-bottom:2px;}
+.nav-item:hover{background:rgba(201,168,76,0.07);color:var(--text);}
+.nav-item.active{background:rgba(201,168,76,0.12);color:var(--gold);}
+.nav-item .icon{width:18px;text-align:center;font-size:13px;flex-shrink:0;}
+.nav-badge{margin-left:auto;font-size:0.65rem;font-weight:700;padding:2px 7px;border-radius:20px;min-width:20px;text-align:center;}
+.nb-gold{background:var(--gold);color:var(--deep);}
+.nb-red{background:var(--red);color:#fff;}
+.nb-green{background:var(--green);color:var(--deep);}
+.nb-blue{background:var(--blue);color:var(--deep);}
+.main-content{padding:2rem;overflow-y:auto;}
+.page-header{margin-bottom:1.8rem;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.page-header-text h2{font-family:'Playfair Display',serif;font-size:1.65rem;color:var(--gold);}
+.page-header-text p{color:var(--muted);font-size:0.82rem;margin-top:4px;}
+
+/* ══ LOGIN (simple, clean) ══ */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;}
+.login-wrap{display:grid;grid-template-columns:1fr 1.1fr;background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,0.5);width:100%;max-width:860px;}
+.login-hero{background:linear-gradient(160deg,#0B0F1A,#161D32);padding:2.5rem;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;}
+.login-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 100% 80% at 20% 80%,rgba(201,168,76,0.12) 0%,transparent 60%);}
+.hero-icon{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-dark));display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:1.2rem;box-shadow:0 10px 40px rgba(201,168,76,0.3);position:relative;z-index:1;}
+.login-hero h1{font-family:'Playfair Display',serif;font-size:1.45rem;color:var(--gold);line-height:1.2;margin-bottom:0.4rem;position:relative;z-index:1;}
+.login-hero p{color:var(--muted);font-size:0.83rem;line-height:1.6;position:relative;z-index:1;}
+.fest-info{border-top:1px solid var(--border);padding-top:1.2rem;margin-top:1.2rem;position:relative;z-index:1;}
+.fest-info p{font-size:0.7rem;color:var(--muted);margin-bottom:3px;}
+.fest-info strong{color:var(--text);font-size:0.78rem;}
+.login-form-panel{padding:2.5rem;}
+.login-form-panel h2{font-size:1.1rem;font-weight:700;margin-bottom:0.2rem;}
+.login-form-panel .sub{color:var(--muted);font-size:0.79rem;margin-bottom:1.6rem;line-height:1.5;}
+.auth-error{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:8px;padding:0.65rem 1rem;font-size:0.82rem;color:var(--red);margin-bottom:1rem;}
+.pub-links{margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;}
+.pub-link{display:block;color:var(--muted);font-size:0.8rem;cursor:pointer;padding:6px 0;transition:color 0.2s;background:none;border:none;text-align:left;font-family:'DM Sans',sans-serif;}
+.pub-link:hover{color:var(--gold);}
+.pub-link.highlight{color:var(--gold);font-weight:600;}
+
+/* ══ INVITE / JOIN SCREEN ══ */
+#joinScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;}
+.join-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2.5rem;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.4);}
+.join-header{display:flex;align-items:center;gap:14px;margin-bottom:1.4rem;}
+.join-badge{font-size:0.65rem;font-weight:700;padding:4px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:0.08em;}
+.join-badge.adj{background:rgba(96,165,250,0.2);color:var(--blue);}
+.join-badge.school{background:rgba(62,207,142,0.2);color:var(--green);}
+.auth-success{background:rgba(62,207,142,0.1);border:1px solid rgba(62,207,142,0.3);border-radius:8px;padding:0.65rem 1rem;font-size:0.82rem;color:var(--green);margin-bottom:1rem;}
+
+/* ══ INVITE LINKS PAGE ══ */
+.invite-link-card{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:12px;padding:1.3rem 1.5rem;margin-bottom:1rem;}
+.invite-link-card .ilc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;flex-wrap:wrap;gap:8px;}
+.invite-link-card .ilc-title{font-weight:600;font-size:0.95rem;}
+.invite-link-card .ilc-desc{font-size:0.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.5;}
+.link-display{display:flex;align-items:center;gap:8px;background:#0D1018;border:1px solid var(--border);border-radius:8px;padding:0.5rem 0.9rem;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);word-break:break-all;flex:1;}
+.link-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.share-btns{display:flex;gap:6px;margin-top:0.8rem;flex-wrap:wrap;}
+.share-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:20px;font-size:0.74rem;font-weight:600;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all 0.2s;}
+.share-wa{background:rgba(37,211,102,0.15);color:#25D366;border:1px solid rgba(37,211,102,0.3);}
+.share-wa:hover{background:rgba(37,211,102,0.25);}
+.share-copy{background:rgba(201,168,76,0.12);color:var(--gold);border:1px solid var(--border);}
+.share-copy:hover{background:rgba(201,168,76,0.22);}
+.share-sms{background:rgba(96,165,250,0.12);color:var(--blue);border:1px solid rgba(96,165,250,0.3);}
+.share-sms:hover{background:rgba(96,165,250,0.22);}
+
+/* ══ SCORE SHEET ══ */
+.score-row{display:grid;grid-template-columns:170px 1fr 90px;align-items:center;gap:1rem;padding:0.85rem 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.score-row:last-child{border-bottom:none;}
+.score-name{font-size:0.88rem;font-weight:600;}
+.score-sub{font-size:0.7rem;color:var(--muted);margin-top:2px;line-height:1.4;}
+.score-slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;outline:none;cursor:pointer;background:linear-gradient(to right,var(--gold) 0%,var(--gold) var(--pct,0%),#2A2D38 var(--pct,0%),#2A2D38 100%);}
+.score-slider::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--gold);border:3px solid var(--deep);cursor:pointer;box-shadow:0 0 8px rgba(201,168,76,0.5);transition:transform 0.15s;}
+.score-slider::-webkit-slider-thumb:hover{transform:scale(1.25);}
+.score-val{font-family:'DM Mono',monospace;font-size:1.05rem;font-weight:600;color:var(--gold);text-align:right;}
+.score-max{font-size:0.68rem;color:var(--muted);}
+.total-bar{background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:10px;padding:1rem 1.3rem;display:flex;align-items:center;justify-content:space-between;margin-top:1.2rem;}
+.total-score-num{font-family:'Playfair Display',serif;font-size:2.4rem;color:var(--gold);line-height:1;}
+.total-label{font-size:0.72rem;color:var(--muted);text-transform:uppercase;}
+.score-grade-pill{font-size:1.1rem;font-weight:700;padding:7px 18px;border-radius:8px;letter-spacing:0.04em;}
+
+/* ══ QUEUE ══ */
+.eq-item{display:flex;align-items:center;gap:1rem;padding:0.85rem 1rem;border:1px solid var(--border);border-radius:10px;margin-bottom:7px;cursor:pointer;transition:all 0.2s;background:rgba(255,255,255,0.015);}
+.eq-item:hover{border-color:var(--gold);background:rgba(201,168,76,0.06);}
+.eq-item.selected{border-color:var(--gold);background:rgba(201,168,76,0.1);}
+.eq-item.scored{opacity:0.42;cursor:default;border-style:dashed;}
+.eq-item.scored:hover{border-color:var(--border);background:rgba(255,255,255,0.015);}
+.eq-num{font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--gold);background:rgba(201,168,76,0.1);padding:4px 8px;border-radius:6px;flex-shrink:0;white-space:nowrap;}
+.eq-info{flex:1;min-width:0;}
+.eq-name{font-weight:600;font-size:0.87rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.eq-meta{font-size:0.7rem;color:var(--muted);margin-top:2px;}
+.sel-banner{background:rgba(201,168,76,0.07);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1.2rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;gap:10px;flex-wrap:wrap;}
+
+/* ══ PUBLISHING ══ */
+.lock-banner{display:flex;align-items:center;gap:12px;border-radius:10px;padding:0.75rem 1.2rem;margin-bottom:1rem;font-size:0.84rem;}
+.lock-banner.locked{background:rgba(62,207,142,0.07);border:1px solid rgba(62,207,142,0.22);color:var(--green);}
+.lock-banner.unlocked{background:rgba(251,146,60,0.07);border:1px solid rgba(251,146,60,0.22);color:var(--orange);}
+.pub-rank-row{display:flex;align-items:center;gap:1rem;padding:0.85rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04);border-radius:8px;}
+.advance-check{width:17px;height:17px;accent-color:var(--gold);cursor:pointer;flex-shrink:0;}
+.advance-label{font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(62,207,142,0.15);color:var(--green);white-space:nowrap;}
+
+/* ══ PUBLIC RESULTS ══ */
+.pub-results-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:1.2rem;}
+.pub-card-header{background:rgba(201,168,76,0.05);border-bottom:1px solid var(--border);padding:1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.pub-result-row{display:flex;align-items:center;gap:1.2rem;padding:0.9rem 1.4rem;border-bottom:1px solid rgba(255,255,255,0.04);}
+.pub-result-row:last-child{border-bottom:none;}
+.pub-advance-tag{font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(62,207,142,0.2);color:var(--green);letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;}
+
+/* ══ SUBMISSION PORTAL ══ */
+#submissionPortal{min-height:100vh;flex-direction:column;}
+.sub-header{background:linear-gradient(135deg,#0B0F1A,#141B2E);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;gap:14px;}
+.sub-body{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:3rem 1.5rem;}
+.sub-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2.5rem;width:100%;max-width:620px;box-shadow:0 20px 60px rgba(0,0,0,0.4);}
+.sub-steps{display:flex;gap:6px;margin-bottom:2rem;}
+.sub-step{flex:1;height:3px;border-radius:2px;background:#2A2D38;transition:background 0.3s;}
+.sub-step.done{background:var(--gold);}
+.ref-box{background:rgba(201,168,76,0.07);border:1px solid var(--border);border-radius:8px;padding:0.9rem 1.3rem;margin:1.2rem 0;display:flex;align-items:center;justify-content:space-between;}
+.ref-num{font-family:'DM Mono',monospace;font-size:1.05rem;color:var(--gold);}
+
+/* ══ USERS TABLE ══ */
+.user-row{display:flex;align-items:center;gap:1rem;padding:0.8rem 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.user-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-dark));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--deep);flex-shrink:0;}
+.role-tag{font-size:0.65rem;font-weight:700;padding:2px 9px;border-radius:20px;text-transform:uppercase;}
+.role-admin{background:rgba(167,139,250,0.2);color:var(--purple);}
+.role-adj{background:rgba(96,165,250,0.2);color:var(--blue);}
+
+/* ══ PROGRESS RING ══ */
+.prog-ring{position:relative;width:70px;height:70px;flex-shrink:0;}
+.prog-ring svg{transform:rotate(-90deg);}
+.prog-ring .track{fill:none;stroke:#2A2D38;stroke-width:5;}
+.prog-ring .fill{fill:none;stroke:var(--gold);stroke-width:5;stroke-linecap:round;transition:stroke-dashoffset 0.5s ease;}
+.prog-ring .lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:600;color:var(--gold);}
+
+/* ══ PUBLIC SHELL ══ */
+#publicOnlyShell .pub-top{background:linear-gradient(135deg,#0B0F1A,#141B2E);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;}
+#publicOnlyShell .pub-body{padding:2rem;max-width:960px;margin:0 auto;}
+
+@media(max-width:900px){
+  .shell-layout{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+  .grid-4,.grid-3,.grid-2{grid-template-columns:1fr;}
+  .login-wrap{grid-template-columns:1fr;}
+  .login-hero{display:none;}
+  .score-row{grid-template-columns:110px 1fr 55px;}
+}
+@media print{
+  .app-header,.sidebar,.btn,.seg-tabs{display:none!important;}
+  .shell-layout{grid-template-columns:1fr;}
+  body{background:white;color:black;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ LOGIN SCREEN ══════════════════ -->
+<div id="loginScreen" style="display:flex;">
+  <div class="login-wrap">
+    <div class="login-hero">
+      <div>
+        <div class="hero-icon">🎵</div>
+        <h1>Kenya Music Festival</h1>
+        <p>Adjudication Management System — Score entries, track results, and publish official rankings across all language categories.</p>
+      </div>
+      <div class="fest-info">
+        <p>Languages Supported</p>
+        <strong>English · Kiswahili · French · German · Arabic · SNE</strong>
+        <div style="height:8px"></div>
+        <p>Festival Levels</p>
+        <strong>Sub County → County → Regional → National</strong>
+        <div style="height:8px"></div>
+        <p>New here?</p>
+        <strong>Use the invite link shared by your admin to join as an adjudicator, or use the school submission link to register your entry.</strong>
+      </div>
+    </div>
+    <div class="login-form-panel">
+      <h2>Sign In</h2>
+      <p class="sub">Enter your credentials to access the adjudication system. Contact your festival administrator if you don't have an account.</p>
+      <div id="loginError" class="auth-error hidden"></div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label>Email Address</label>
+        <input class="form-control" id="loginEmail" type="email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="form-group" style="margin-bottom:1.5rem">
+        <label>Password</label>
+        <input class="form-control" id="loginPassword" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" id="loginBtn" onclick="doLogin()">Sign In →</button>
+      <div class="pub-links">
+        <button class="pub-link highlight" onclick="showSubmissionPortal()">📝 Submit a School Entry (no login needed)</button>
+        <button class="pub-link" onclick="showPublicShell()">👁 View Published Results (public)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ JOIN / SELF-REGISTER SCREEN ══════════════════ -->
+<div id="joinScreen" class="hidden">
+  <div class="join-card">
+    <div class="join-header">
+      <div class="logo-icon" id="joinIcon" style="width:44px;height:44px;font-size:20px;background:linear-gradient(135deg,var(--blue),#1D4ED8);">✏️</div>
+      <div>
+        <div style="font-family:'Playfair Display',serif;color:var(--gold);font-size:1rem;">Kenya Music Festival</div>
+        <span class="join-badge adj" id="joinBadge">Adjudicator Registration</span>
+      </div>
+    </div>
+    <h2 style="font-size:1.2rem;margin-bottom:0.3rem;" id="joinTitle">Join as Adjudicator</h2>
+    <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1.4rem;line-height:1.6;" id="joinSubtitle">You've been invited to join the Kenya Music Festival adjudication team. Create your account below.</p>
+    <div id="joinLangInfo" class="hidden" style="background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.2);border-radius:8px;padding:0.65rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:var(--blue);">📌 You are being registered for: <strong id="joinLangLabel">—</strong></div>
+    <div id="joinError" class="auth-error hidden"></div>
+    <div id="joinSuccess" class="auth-success hidden"></div>
+    <div id="joinForm">
+      <div class="form-group" style="margin-bottom:0.9rem"><label>Full Name</label><input class="form-control" id="join-name" type="text" placeholder="Your full name"></div>
+      <div class="form-group" style="margin-bottom:0.9rem"><label>Email Address</label><input class="form-control" id="join-email" type="email" placeholder="your@email.com"></div>
+      <div class="form-group" style="margin-bottom:0.9rem"><label>Password <span style="color:var(--muted);font-weight:400">(min 6 characters)</span></label><input class="form-control" id="join-pass" type="password" placeholder="Create a password"></div>
+      <div class="form-group" style="margin-bottom:1.4rem"><label>Confirm Password</label><input class="form-control" id="join-pass2" type="password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')doJoinRegister()"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" id="joinBtn" onclick="doJoinRegister()">Create Account →</button>
+    </div>
+    <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+      <button class="pub-link" onclick="backToLogin()">← Already have an account? Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SUBMISSION PORTAL ══════════════════ -->
+<div id="submissionPortal" class="hidden" style="flex-direction:column;">
+  <div class="sub-header">
+    <div class="logo-icon gold-icon" style="width:38px;height:38px;font-size:17px;">🎵</div>
+    <div>
+      <div style="font-family:'Playfair Display',serif;color:var(--gold);font-size:0.95rem;line-height:1;">Kenya Music Festival</div>
+      <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">School Entry Submission</div>
+    </div>
+    <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="backToLogin()">← Back</button>
+  </div>
+  <div class="sub-body">
+    <div class="sub-card">
+      <div id="subStep1">
+        <h2 style="font-family:'Playfair Display',serif;color:var(--gold);font-size:1.4rem;margin-bottom:0.4rem;">Submit Your Entry</h2>
+        <p style="color:var(--muted);font-size:0.83rem;margin-bottom:1.4rem;line-height:1.6;">Fill in your school's details. No account required. The festival team will review and confirm your entry.</p>
+        <div class="sub-steps"><div class="sub-step done"></div><div class="sub-step" id="step2bar"></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div class="form-group" style="grid-column:1/-1"><label>School / Institution Name *</label><input class="form-control" id="sub-school" placeholder="Full name of your school"></div>
+          <div class="form-group" style="grid-column:1/-1"><label>Performer / Participant Name</label><input class="form-control" id="sub-performer" placeholder="Name of participant (leave blank if group)"></div>
+          <div class="form-group"><label>Language / Section *</label><select class="form-control" id="sub-lang" onchange="updateSubCategory()"><option>English</option><option>Kiswahili</option><option>French</option><option>German</option><option>Arabic</option><option>SNE</option></select></div>
+          <div class="form-group"><label>Category *</label><select class="form-control" id="sub-category"></select></div>
+          <div class="form-group"><label>Level *</label><select class="form-control" id="sub-level"><option>Sub County</option><option>County</option><option>Regional</option><option>National</option></select></div>
+          <div class="form-group"><label>Entry Number</label><input class="form-control" id="sub-entryno" placeholder="e.g. 042"></div>
+          <div class="form-group" style="grid-column:1/-1"><label>Work Title / Topic *</label><input class="form-control" id="sub-work" placeholder="Title of poem, composition, speech topic…"></div>
+          <div class="form-group"><label>Contact Person</label><input class="form-control" id="sub-contact" placeholder="Teacher / coordinator"></div>
+          <div class="form-group"><label>Contact Phone</label><input class="form-control" id="sub-phone" placeholder="+254 7XX XXX XXX" type="tel"></div>
+          <div class="form-group" style="grid-column:1/-1"><label>Additional Notes</label><textarea class="form-control" id="sub-notes" rows="2" placeholder="Any special requirements…"></textarea></div>
+        </div>
+        <div style="margin-top:1.4rem;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="submitSchoolEntry()" id="subSubmitBtn">📤 Submit Entry</button>
+          <button class="btn btn-outline" onclick="backToLogin()">Cancel</button>
+        </div>
+      </div>
+      <div id="subStep2" class="hidden" style="text-align:center;padding:1.5rem 0;">
+        <div style="font-size:3rem;margin-bottom:0.8rem;">✅</div>
+        <h3 style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--green);margin-bottom:0.4rem;">Entry Submitted!</h3>
+        <p style="color:var(--muted);font-size:0.83rem;line-height:1.6;">Pending review by the festival team.</p>
+        <div class="ref-box"><div><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Reference</div><div class="ref-num" id="subRefNum">—</div></div><div style="text-align:right"><div style="font-size:0.68rem;color:var(--muted)">Status</div><div style="color:var(--orange);font-weight:600;font-size:0.83rem;margin-top:4px">⏳ Pending Review</div></div></div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:1rem;text-align:left;margin-bottom:1.2rem"><div style="font-size:0.7rem;color:var(--muted);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.06em">Summary</div><div id="subSummary" style="font-size:0.84rem;line-height:1.9"></div></div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <button class="btn btn-outline" onclick="resetSubForm()">Submit Another</button>
+          <button class="btn btn-outline" onclick="showPublicShell()">View Published Results</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ ADMIN SHELL ══════════════════ -->
+<div id="adminShell" class="hidden">
+  <header class="app-header">
+    <div class="logo"><div class="logo-icon admin-icon">🛡</div><div class="logo-text"><h1>Kenya Music Festival</h1><p>Admin Portal</p></div></div>
+    <div class="header-right">
+      <span class="status-dot"></span>
+      <span id="adminConnStatus" style="font-size:0.73rem;color:var(--muted)">Live</span>
+      <span class="portal-label portal-admin">Admin</span>
+      <div class="user-chip"><span id="adminUserName" style="font-size:0.82rem;font-weight:500">—</span></div>
+      <button class="btn btn-outline btn-sm" onclick="doLogout()">Sign Out</button>
+    </div>
+  </header>
+  <div class="shell-layout">
+    <nav class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Overview</div>
+        <div class="nav-item active" onclick="adminNav('dashboard',this)"><span class="icon">📊</span> Dashboard</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Entries</div>
+        <div class="nav-item" onclick="adminNav('inbox',this)"><span class="icon">📥</span> Entry Inbox <span class="nav-badge nb-red" id="adminPendingBadge" style="display:none">0</span></div>
+        <div class="nav-item" onclick="adminNav('allresults',this)"><span class="icon">📋</span> All Scores <span class="nav-badge nb-gold" id="adminScoreBadge">0</span></div>
+        <div class="nav-item" onclick="adminNav('leaderboard',this)"><span class="icon">🏆</span> Leaderboard</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Publishing</div>
+        <div class="nav-item" onclick="adminNav('publishing',this)"><span class="icon">🌍</span> Publish Results <span class="nav-badge nb-green" id="adminPublishedBadge">0</span></div>
+        <div class="nav-item" onclick="adminNav('public',this)"><span class="icon">👁</span> Public Display</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Management</div>
+        <div class="nav-item" onclick="adminNav('invite',this)"><span class="icon">🔗</span> Invite Links</div>
+        <div class="nav-item" onclick="adminNav('users',this)"><span class="icon">👥</span> Users</div>
+      </div>
+    </nav>
+    <main class="main-content">
+
+      <!-- ADMIN DASHBOARD -->
+      <div class="page active" id="admin-page-dashboard">
+        <div class="page-header"><div class="page-header-text"><h2>Dashboard</h2><p>Full overview of adjudication progress</p></div></div>
+        <div class="grid-4" style="margin-bottom:1.5rem">
+          <div class="stat-card orange"><div class="stat-icon">⏳</div><div class="stat-value" id="adm-stat-pending">0</div><div class="stat-label">Pending Entries</div></div>
+          <div class="stat-card blue"><div class="stat-icon">✅</div><div class="stat-value" id="adm-stat-approved">0</div><div class="stat-label">Approved</div></div>
+          <div class="stat-card gold"><div class="stat-icon">✏️</div><div class="stat-value" id="adm-stat-scored">0</div><div class="stat-label">Scored</div></div>
+          <div class="stat-card green"><div class="stat-icon">🌍</div><div class="stat-value" id="adm-stat-published">0</div><div class="stat-label">Published</div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card"><div class="card-header"><span class="card-title">Recent Scores</span><span class="badge badge-gold">Live</span></div><div id="adm-recentList"><div class="loading"><div class="spinner"></div></div></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">Scores by Language</span></div><div id="adm-langChart"></div></div>
+        </div>
+        <div class="card" style="margin-top:1.2rem"><div class="card-header"><span class="card-title">Adjudicator Activity</span></div><div id="adm-adjActivity"><div class="loading"><div class="spinner"></div></div></div></div>
+      </div>
+
+      <!-- ADMIN INBOX -->
+      <div class="page" id="admin-page-inbox">
+        <div class="page-header">
+          <div class="page-header-text"><h2>Entry Inbox</h2><p>Review and approve school submissions</p></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span id="adminShareLink" style="font-size:0.7rem;color:var(--muted);font-family:'DM Mono',monospace;background:rgba(255,255,255,0.04);padding:5px 12px;border-radius:8px;border:1px solid var(--border)">—</span>
+            <button class="btn btn-outline btn-sm" onclick="copySubmitLink()">📋 Copy Link</button>
+          </div>
+        </div>
+        <div class="grid-4" style="margin-bottom:1.2rem">
+          <div class="stat-card orange" style="padding:1rem"><div class="stat-value" style="font-size:1.5rem" id="inbox-pending">0</div><div class="stat-label">Pending</div></div>
+          <div class="stat-card blue" style="padding:1rem"><div class="stat-value" style="font-size:1.5rem" id="inbox-approved">0</div><div class="stat-label">Approved</div></div>
+          <div class="stat-card green" style="padding:1rem"><div class="stat-value" style="font-size:1.5rem" id="inbox-scored">0</div><div class="stat-label">Scored</div></div>
+          <div class="stat-card red" style="padding:1rem"><div class="stat-value" style="font-size:1.5rem" id="inbox-rejected">0</div><div class="stat-label">Rejected</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <select class="form-control" id="inboxStatusFilter" onchange="renderInbox()" style="width:140px"><option value="">All Status</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="scored">Scored</option><option value="rejected">Rejected</option></select>
+              <select class="form-control" id="inboxLangFilter" onchange="renderInbox()" style="width:140px"><option value="">All Languages</option><option>English</option><option>Kiswahili</option><option>French</option><option>German</option><option>Arabic</option><option>SNE</option></select>
+            </div>
+            <span class="badge badge-blue" id="inboxCountBadge">0 entries</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Ref</th><th>School</th><th>Language</th><th>Category</th><th>Level</th><th>Work</th><th>Contact</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="inboxTable"><tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN ALL RESULTS -->
+      <div class="page" id="admin-page-allresults">
+        <div class="page-header"><div class="page-header-text"><h2>All Scores</h2><p>Browse all submitted adjudication scores</p></div><button class="btn btn-outline" onclick="exportCSV()">⬇ Export CSV</button></div>
+        <div class="card">
+          <div class="card-header">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <input class="form-control" id="adm-searchBox" placeholder="🔍 Search…" oninput="renderAdminResults()" style="width:200px">
+              <select class="form-control" id="adm-filterLang" onchange="renderAdminResults()" style="width:140px"><option value="">All Languages</option><option>English</option><option>Kiswahili</option><option>French</option><option>German</option><option>Arabic</option><option>SNE</option></select>
+              <select class="form-control" id="adm-filterLevel" onchange="renderAdminResults()" style="width:140px"><option value="">All Levels</option><option>Sub County</option><option>County</option><option>Regional</option><option>National</option></select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Entry</th><th>Performer</th><th>Language</th><th>Category</th><th>Level</th><th>Score</th><th>Grade</th><th>Adjudicator</th><th>Date</th><th>Actions</th></tr></thead>
+              <tbody id="adminResultsTable"><tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN LEADERBOARD -->
+      <div class="page" id="admin-page-leaderboard">
+        <div class="page-header"><div class="page-header-text"><h2>Leaderboard</h2><p>Top performers ranked by score</p></div></div>
+        <div class="seg-tabs" id="admLbTabs">
+          <button class="seg-tab active" onclick="setAdmLbTab('All',this)">All</button>
+          <button class="seg-tab" onclick="setAdmLbTab('English',this)">English</button>
+          <button class="seg-tab" onclick="setAdmLbTab('Kiswahili',this)">Kiswahili</button>
+          <button class="seg-tab" onclick="setAdmLbTab('French',this)">French</button>
+          <button class="seg-tab" onclick="setAdmLbTab('German',this)">German</button>
+          <button class="seg-tab" onclick="setAdmLbTab('Arabic',this)">Arabic</button>
+          <button class="seg-tab" onclick="setAdmLbTab('SNE',this)">SNE</button>
+        </div>
+        <div id="admLeaderboardList"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+
+      <!-- ADMIN PUBLISHING -->
+      <div class="page" id="admin-page-publishing">
+        <div class="page-header"><div class="page-header-text"><h2>Publish Results</h2><p>Finalise and publish official results</p></div><button class="btn btn-success" onclick="publishSelected()">🌍 Publish to Public</button></div>
+        <div class="card" style="margin-bottom:1.2rem">
+          <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;">
+            <div class="form-group" style="flex:1;min-width:120px"><label>Language</label><select class="form-control" id="pub-lang" onchange="onPubLangChange()"><option>English</option><option>Kiswahili</option><option>French</option><option>German</option><option>Arabic</option><option>SNE</option></select></div>
+            <div class="form-group" style="flex:1;min-width:120px"><label>Category</label><select class="form-control" id="pub-cat" onchange="loadPublishView()"></select></div>
+            <div class="form-group" style="flex:1;min-width:120px"><label>Level</label><select class="form-control" id="pub-level" onchange="loadPublishView()"><option>Sub County</option><option>County</option><option>Regional</option><option>National</option></select></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-outline" onclick="toggleLock()" id="lockBtn">🔒 Lock</button></div>
+          </div>
+        </div>
+        <div id="lockBanner" class="lock-banner unlocked"><span>🔓</span><div><strong>Unlocked</strong> — Scores can still be modified.</div></div>
+        <div class="card">
+          <div class="card-header"><span class="card-title" id="pubTitle">Ranked Results</span><span class="badge badge-blue" id="pubCount">0 entries</span></div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem">Check ✅ to mark performers advancing to the next level.</div>
+          <div id="publishRankedList"><div class="empty"><div class="empty-icon">🔍</div><p>Select Language, Category and Level above</p></div></div>
+        </div>
+      </div>
+
+      <!-- ADMIN PUBLIC VIEW -->
+      <div class="page" id="admin-page-public">
+        <div class="page-header"><div class="page-header-text"><h2>Public Results</h2><p>What the public sees</p></div><button class="btn btn-outline" onclick="window.print()">🖨 Print</button></div>
+        <div class="seg-tabs" id="admPubTabs"><button class="seg-tab active" onclick="setAdmPubTab('All',this)">All</button><button class="seg-tab" onclick="setAdmPubTab('English',this)">English</button><button class="seg-tab" onclick="setAdmPubTab('Kiswahili',this)">Kiswahili</button><button class="seg-tab" onclick="setAdmPubTab('French',this)">French</button><button class="seg-tab" onclick="setAdmPubTab('German',this)">German</button><button class="seg-tab" onclick="setAdmPubTab('Arabic',this)">Arabic</button><button class="seg-tab" onclick="setAdmPubTab('SNE',this)">SNE</button></div>
+        <div id="adminPublicList"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+
+      <!-- ══ ADMIN INVITE LINKS ══ -->
+      <div class="page" id="admin-page-invite">
+        <div class="page-header">
+          <div class="page-header-text"><h2>Invite Links</h2><p>Share these links via WhatsApp, SMS or social media — no manual account creation needed</p></div>
+        </div>
+
+        <!-- School submission link -->
+        <div class="invite-link-card">
+          <div class="ilc-header">
+            <div class="ilc-title">🏫 School Entry Submission</div>
+            <span class="badge badge-green">Public · No login</span>
+          </div>
+          <div class="ilc-desc">Share this link with teachers and school coordinators. They can submit their competition entries directly — no account or login required.</div>
+          <div class="link-row">
+            <div class="link-display" id="schoolLinkDisplay">—</div>
+          </div>
+          <div class="share-btns">
+            <button class="share-btn share-wa" onclick="shareWhatsApp('school')">📲 WhatsApp</button>
+            <button class="share-btn share-sms" onclick="shareSMS('school')">💬 SMS</button>
+            <button class="share-btn share-copy" onclick="copyLink('school')">📋 Copy Link</button>
+          </div>
+        </div>
+
+        <!-- Adjudicator invite links per language -->
+        <div class="invite-link-card">
+          <div class="ilc-header">
+            <div class="ilc-title">✏️ Adjudicator Invite Links</div>
+            <span class="badge badge-blue">Requires account creation</span>
+          </div>
+          <div class="ilc-desc">Each link registers an adjudicator for a specific language. Share the correct link with each adjudicator — they'll create their own account by clicking it. You can also generate a general invite (all languages).</div>
+          <div style="display:grid;gap:0.9rem;margin-top:0.4rem" id="adjInviteLinks">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Public results link -->
+        <div class="invite-link-card">
+          <div class="ilc-header">
+            <div class="ilc-title">🌍 Public Results Page</div>
+            <span class="badge badge-gold">Read-only · Anyone</span>
+          </div>
+          <div class="ilc-desc">Share this link so anyone — parents, schools, press — can view officially published results in real time.</div>
+          <div class="link-row">
+            <div class="link-display" id="publicLinkDisplay">—</div>
+          </div>
+          <div class="share-btns">
+            <button class="share-btn share-wa" onclick="shareWhatsApp('public')">📲 WhatsApp</button>
+            <button class="share-btn share-sms" onclick="shareSMS('public')">💬 SMS</button>
+            <button class="share-btn share-copy" onclick="copyLink('public')">📋 Copy Link</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN USERS -->
+      <div class="page" id="admin-page-users">
+        <div class="page-header">
+          <div class="page-header-text"><h2>Users</h2><p>All accounts registered in the system</p></div>
+          <button class="btn btn-outline" onclick="adminNav('invite',document.querySelector('#adminShell .nav-item:nth-child(9)'))">🔗 Manage Invite Links</button>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">All Users</span><span class="nav-badge nb-gold" id="userCountBadge">0</span></div>
+          <div id="usersList"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════ ADJUDICATOR SHELL ══════════════════ -->
+<div id="adjShell" class="hidden">
+  <header class="app-header">
+    <div class="logo"><div class="logo-icon adj-icon">✏️</div><div class="logo-text"><h1>Kenya Music Festival</h1><p>Adjudicator Portal</p></div></div>
+    <div class="header-right">
+      <span class="status-dot"></span>
+      <span class="portal-label portal-adj">Adjudicator</span>
+      <div class="user-chip"><span id="adjUserName" style="font-size:0.82rem;font-weight:500">—</span><span id="adjLangBadge" class="badge badge-blue" style="font-size:0.65rem;display:none"></span></div>
+      <button class="btn btn-outline btn-sm" onclick="doLogout()">Sign Out</button>
+    </div>
+  </header>
+  <div class="shell-layout">
+    <nav class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Work</div>
+        <div class="nav-item active" onclick="adjNav('queue',this)"><span class="icon">📥</span> My Queue <span class="nav-badge nb-blue" id="adjQueueBadge">0</span></div>
+        <div class="nav-item" onclick="adjNav('score',this)"><span class="icon">✏️</span> Score Entry</div>
+        <div class="nav-item" onclick="adjNav('myscores',this)"><span class="icon">📋</span> My Scores <span class="nav-badge nb-gold" id="adjMyScoresBadge">0</span></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Results</div>
+        <div class="nav-item" onclick="adjNav('leaderboard',this)"><span class="icon">🏆</span> Leaderboard</div>
+        <div class="nav-item" onclick="adjNav('public',this)"><span class="icon">🌍</span> Public Display</div>
+      </div>
+    </nav>
+    <main class="main-content">
+      <!-- ADJ QUEUE -->
+      <div class="page active" id="adj-page-queue">
+        <div class="page-header"><div class="page-header-text"><h2>My Queue</h2><p>Approved entries ready to score</p></div></div>
+        <div class="card" style="margin-bottom:1.2rem">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <select class="form-control" id="adjQueueLang" onchange="renderAdjQueue()" style="width:150px"><option value="">All Languages</option><option>English</option><option>Kiswahili</option><option>French</option><option>German</option><option>Arabic</option><option>SNE</option></select>
+            <select class="form-control" id="adjQueueLevel" onchange="renderAdjQueue()" style="width:150px"><option value="">All Levels</option><option>Sub County</option><option>County</option><option>Regional</option><option>National</option></select>
+            <span class="badge badge-blue" id="adjQueueCount">0 ready</span>
+          </div>
+        </div>
+        <div id="adjQueueList"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+      <!-- ADJ SCORE ENTRY -->
+      <div class="page" id="adj-page-score">
+        <div class="page-header"><div class="page-header-text"><h2>Score Entry</h2><p>Record scores for a performer</p></div></div>
+        <div id="adjSelBanner" class="sel-banner hidden">
+          <div><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">Now Scoring</div><div style="font-weight:700;font-size:0.9rem;color:var(--gold)" id="adjSelName">—</div><div style="font-size:0.72rem;color:var(--muted);margin-top:2px" id="adjSelMeta">—</div></div>
+          <button class="btn btn-outline btn-sm" onclick="clearAdjSelection()">✕ Clear</button>
+        </div>
+        <div class="card" style="margin-bottom:1.2rem">
+          <div class="card-header"><span class="card-title">Performer Information</span><span id="adjEntrySourceBadge" class="badge badge-blue hidden">From Queue</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+            <div class="form-group"><label>Level</label><select class="form-control" id="af-level"><option>Sub County</option><option>County</option><option>Regional</option><option>National</option></select></div>
+            <div class="form-group"><label>Language</label><select class="form-control" id="af-lang" onchange="adjUpdateCategory()"><option>English</option><option>Kiswahili</option><option>French</option><option>German</option><option>Arabic</option><option>SNE</option></select></div>
+            <div class="form-group"><label>Category</label><select class="form-control" id="af-category" onchange="adjBuildScoreSheet()"></select></div>
+            <div class="form-group"><label>Institution / Performer</label><input class="form-control" id="af-institution" placeholder="Name" type="text"></div>
+            <div class="form-group"><label>Class</label><input class="form-control" id="af-class" placeholder="e.g. Class 4" type="text"></div>
+            <div class="form-group"><label>Entry No.</label><input class="form-control" id="af-entry" placeholder="e.g. 042" type="text"></div>
+            <div class="form-group" style="grid-column:1/-1"><label>Work Presented</label><input class="form-control" id="af-work" placeholder="Title of work or topic" type="text"></div>
+            <div class="form-group"><label>Adjudicator 1</label><input class="form-control" id="af-adj1" type="text" placeholder="Full name"></div>
+            <div class="form-group"><label>Adjudicator 2</label><input class="form-control" id="af-adj2" type="text" placeholder="Full name"></div>
+            <div class="form-group"><label>Date</label><input class="form-control" id="af-date" type="date"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title" id="adjSheetTitle">Scoring Criteria</span><span class="badge badge-blue" id="adjSheetLang">English</span></div>
+          <div id="adjScoreRows"></div>
+          <div class="total-bar">
+            <div><div class="total-label">Total Score</div><div class="total-score-num" id="adjTotalNum">0</div></div>
+            <div id="adjGradePill" class="score-grade-pill pill-gold">—</div>
+            <div><div class="total-label">Out of</div><div class="total-score-num">100</div></div>
+          </div>
+          <div style="margin-top:1rem;display:grid;gap:1rem">
+            <div class="form-group"><label>Adjudicator Remarks</label><textarea class="form-control" id="af-remarks" rows="3" placeholder="Overall comments…"></textarea></div>
+            <div class="form-group" style="max-width:180px"><label>Position Awarded</label><input class="form-control" id="af-position" placeholder="e.g. 1st" type="text"></div>
+          </div>
+          <div style="margin-top:1.2rem;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="adjSubmitScore()">💾 Save Score</button>
+            <button class="btn btn-outline" onclick="adjClearForm()">🔄 Clear</button>
+          </div>
+        </div>
+      </div>
+      <!-- ADJ MY SCORES -->
+      <div class="page" id="adj-page-myscores">
+        <div class="page-header"><div class="page-header-text"><h2>My Scores</h2><p>Scores you have submitted</p></div></div>
+        <div class="card"><div class="table-wrap"><table><thead><tr><th>Entry</th><th>Performer</th><th>Language</th><th>Category</th><th>Level</th><th>Score</th><th>Grade</th><th>Date</th></tr></thead><tbody id="adjMyScoresTable"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div></div>
+      </div>
+      <!-- ADJ LEADERBOARD -->
+      <div class="page" id="adj-page-leaderboard">
+        <div class="page-header"><div class="page-header-text"><h2>Leaderboard</h2><p>Top performers</p></div></div>
+        <div class="seg-tabs" id="adjLbTabs"><button class="seg-tab active" onclick="setAdjLbTab('All',this)">All</button><button class="seg-tab" onclick="setAdjLbTab('English',this)">English</button><button class="seg-tab" onclick="setAdjLbTab('Kiswahili',this)">Kiswahili</button><button class="seg-tab" onclick="setAdjLbTab('French',this)">French</button><button class="seg-tab" onclick="setAdjLbTab('German',this)">German</button><button class="seg-tab" onclick="setAdjLbTab('Arabic',this)">Arabic</button><button class="seg-tab" onclick="setAdjLbTab('SNE',this)">SNE</button></div>
+        <div id="adjLeaderboardList"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+      <!-- ADJ PUBLIC -->
+      <div class="page" id="adj-page-public">
+        <div class="page-header"><div class="page-header-text"><h2>Public Results</h2><p>Officially published results</p></div></div>
+        <div class="seg-tabs" id="adjPubTabs"><button class="seg-tab active" onclick="setAdjPubTab('All',this)">All</button><button class="seg-tab" onclick="setAdjPubTab('English',this)">English</button><button class="seg-tab" onclick="setAdjPubTab('Kiswahili',this)">Kiswahili</button><button class="seg-tab" onclick="setAdjPubTab('French',this)">French</button><button class="seg-tab" onclick="setAdjPubTab('German',this)">German</button><button class="seg-tab" onclick="setAdjPubTab('Arabic',this)">Arabic</button><button class="seg-tab" onclick="setAdjPubTab('SNE',this)">SNE</button></div>
+        <div id="adjPublicList"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════ PUBLIC SHELL ══════════════════ -->
+<div id="publicOnlyShell" class="hidden">
+  <div class="pub-top"><div class="logo"><div class="logo-icon gold-icon">🎵</div><div class="logo-text"><h1>Kenya Music Festival</h1><p>Official Published Results</p></div></div><div style="display:flex;gap:10px"><button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button><button class="btn btn-outline btn-sm" onclick="backToLogin()">🔑 Sign In</button></div></div>
+  <div class="pub-body">
+    <div style="margin-bottom:1.4rem"><h2 style="font-family:'Playfair Display',serif;color:var(--gold);font-size:1.5rem;">Published Results</h2><p style="color:var(--muted);font-size:0.79rem;margin-top:4px">Officially finalised by the adjudication team</p></div>
+    <div class="seg-tabs"><button class="seg-tab active" onclick="setPubTab('All',this,'publicResultsListPublic')">All</button><button class="seg-tab" onclick="setPubTab('English',this,'publicResultsListPublic')">English</button><button class="seg-tab" onclick="setPubTab('Kiswahili',this,'publicResultsListPublic')">Kiswahili</button><button class="seg-tab" onclick="setPubTab('French',this,'publicResultsListPublic')">French</button><button class="seg-tab" onclick="setPubTab('German',this,'publicResultsListPublic')">German</button><button class="seg-tab" onclick="setPubTab('Arabic',this,'publicResultsListPublic')">Arabic</button><button class="seg-tab" onclick="setPubTab('SNE',this,'publicResultsListPublic')">SNE</button></div>
+    <div id="publicResultsListPublic"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// FIREBASE INIT
+// ══════════════════════════════════════════════════════
+const firebaseConfig={apiKey:"AIzaSyDdIgKsGFnm9Do9gt38tdd2WXP-skE9zOU",authDomain:"mchango-e06bb.firebaseapp.com",databaseURL:"https://mchango-e06bb-default-rtdb.firebaseio.com",projectId:"mchango-e06bb",storageBucket:"mchango-e06bb.firebasestorage.app",messagingSenderId:"1008954361095",appId:"1:1008954361095:web:aa1002a1a16a107992b1a2"};
+firebase.initializeApp(firebaseConfig);
+// Secondary app for registering adjudicators without logging out current user (admin case)
+const secondaryApp=firebase.initializeApp(firebaseConfig,'secondary');
+const secondaryAuth=secondaryApp.auth();
+const auth=firebase.auth();
+const db=firebase.database();
+const scoresRef=db.ref('kmf_scores');
+const entriesRef=db.ref('kmf_entries');
+const publishedRef=db.ref('kmf_published');
+const usersRef=db.ref('kmf_users');
+
+// ══════════════════════════════════════════════════════
+// CATEGORIES & CRITERIA
+// ══════════════════════════════════════════════════════
+const CATEGORIES={
+  English:['Set Verse','Composition','Public Speaking'],
+  Kiswahili:['Set Verse','Composition','Public Speaking'],
+  French:['Set Verse','Composition','Public Speaking'],
+  German:['Set Verse','Composition','Public Speaking'],
+  Arabic:['Set Verse','Composition','Public Speaking'],
+  SNE:['Folk Song/Dance (Hearing Impaired)','Folk Dance (Visually Impaired)','Set Verse (Visually Impaired)','Set Verse (Mentally Handicapped)','Own Composition (Hearing Impairment)','Music Solo/Choral (Visually Impaired)','Folk Dance (Mentally Handicapped)']
+};
+const ALL_LANGS=['English','Kiswahili','French','German','Arabic','SNE'];
+
+function getCriteria(lang,cat){
+  if(lang==='Kiswahili'){
+    if(cat==='Set Verse')return[{name:'Matamshi',subs:'Mapigo, Toni, Kiimbo, Kutamka, Nguvu ya Sauti',max:30},{name:'Uwasilishaji',subs:'Umaizi wa Matini, Umakinifu Jukwani, Ufasaha, Hisia, Ishara, Tempo, Mwendo',max:60},{name:'Ufasiri',subs:'Kuaminika, Athari za Mawasiliano, Burudisho',max:10}];
+    if(cat==='Composition')return[{name:'Utunzi',subs:'Uhalisi, Ubunifu, Ushairi, Umuhimu, Ufaafu',max:20},{name:'Matamshi',subs:'Mapigo, Toni, Kiimbo, Kutamka, Nguvu ya Sauti',max:30},{name:'Uwasilishaji',subs:'Umaizi wa Matini, Umakinifu Jukwani, Ufasaha, Hisia, Ishara',max:40},{name:'Ufasiri',subs:'Kuaminika, Athari za Mawasiliano, Burudisho',max:10}];
+    if(cat==='Public Speaking')return[{name:'Matamshi',subs:'Mapigo, Toni, Kiimbo, Kutamka, Nguvu ya Sauti',max:30},{name:'Uwasilishaji',subs:'Umaizi wa Dhamira, Umakinifu Jukwani, Ufasaha, Hisia, Ishara, Tempo, Mtiririko',max:60},{name:'Ufasiri',subs:'Kuaminika, Athari za Mawasiliano, Burudisho',max:10}];
+  }
+  if(lang==='German'){
+    if(cat==='Set Verse')return[{name:'Stimme',subs:'Phrasierung, Ton, Intonation, Aussprache, Projektion',max:30},{name:'Presentation',subs:'Textsicherheit, Bühnenpräsenz, Flüssigkeit, Ausdruck, Gestik, Rhythmus',max:60},{name:'Interpretation',subs:'Glaubwürdigkeit, Kommunikative Wirkung, Unterhaltung',max:10}];
+    if(cat==='Composition')return[{name:'Script',subs:'Originalität, Kreativität, Poesie, Relevanz, Angemessenheit',max:20},{name:'Stimme',subs:'Phrasierung, Ton, Intonation, Aussprache, Projektion',max:30},{name:'Presentation',subs:'Textsicherheit, Bühnenpräsenz, Flüssigkeit, Ausdruck, Gestik',max:40},{name:'Interpretation',subs:'Glaubwürdigkeit, Kommunikative Wirkung, Unterhaltung',max:10}];
+    if(cat==='Public Speaking')return[{name:'Stimme',subs:'Phrasierung, Ton, Intonation, Aussprache, Projektion',max:30},{name:'Presentation',subs:'Themensicherheit, Bühnenpräsenz, Redefluss, Ausdruck, Gestik, Logischer Aufbau',max:60},{name:'Interpretation',subs:'Glaubwürdigkeit, Kommunikative Wirkung, Unterhaltung',max:10}];
+  }
+  if(lang==='French'){
+    if(cat==='Set Verse')return[{name:'Voix',subs:'Phrasé, Ton, Intonation, Articulation, Projection',max:30},{name:'Présentation',subs:'Maîtrise du texte, Présence scénique, Fluidité, Expression, Gestes, Rythme',max:60},{name:'Interprétation',subs:'Crédibilité, Impact communicatif, Divertissement',max:10}];
+    if(cat==='Composition')return[{name:'Script',subs:'Originalité, Créativité, Poésie, Pertinence',max:20},{name:'Voix',subs:'Phrasé, Ton, Intonation, Articulation, Projection',max:30},{name:'Présentation',subs:'Maîtrise, Présence scénique, Fluidité, Expression, Gestes, Rythme',max:40},{name:'Interprétation',subs:'Crédibilité, Impact communicatif, Divertissement',max:10}];
+    if(cat==='Public Speaking')return[{name:'Voix',subs:'Phrasé, Ton, Intonation, Articulation, Projection',max:30},{name:'Présentation',subs:'Maîtrise du sujet, Présence scénique, Fluidité, Expression, Gestes, Logique',max:60},{name:'Interprétation',subs:'Crédibilité, Impact communicatif, Divertissement',max:10}];
+  }
+  if(lang==='Arabic'){
+    if(cat==='Set Verse')return[{name:'الصوت',subs:'النبر، النغمة، التجويد، النطق، الإسقاط',max:30},{name:'العرض',subs:'إتقان النص، الحضور المسرحي، الطلاقة، التعبير، الإيماءات، الإيقاع',max:60},{name:'التأويل',subs:'المصداقية، الأثر التواصلي، الترفيه',max:10}];
+    if(cat==='Composition')return[{name:'النص',subs:'الأصالة، الإبداع، الشعر، الأهمية، الملاءمة',max:20},{name:'الصوت',subs:'النبر، النغمة، التجويد، النطق، الإسقاط',max:30},{name:'العرض',subs:'الإتقان، الحضور المسرحي، الطلاقة، التعبير، الإيماءات',max:40},{name:'التأويل',subs:'المصداقية، الأثر التواصلي، الترفيه',max:10}];
+    if(cat==='Public Speaking')return[{name:'الصوت',subs:'النبر، النغمة، التجويد، النطق، الإسقاط',max:30},{name:'العرض',subs:'إتقان الموضوع، الحضور المسرحي، الطلاقة، التعبير، الإيماءات، المنطق',max:60},{name:'التأويل',subs:'المصداقية، الأثر التواصلي، الترفيه',max:10}];
+  }
+  if(lang==='SNE'){
+    if(cat.includes('Folk Song')||cat.includes('Folk Dance')){
+      if(cat.includes('Hearing Impaired'))return[{name:'Choice',subs:'Age, Gender, Occasion',max:5},{name:'Signing/Singing',subs:'Style, Body movements, Facial expression',max:25},{name:'Leader/Signaler',subs:'Command, Leadership',max:10},{name:'Performance Technique',subs:'Instruments, Body movement, Formation, Choreography, Costumes',max:40},{name:'Overall Musicianship',subs:'Execution, Stage Presence, Poise, Entertainment',max:20}];
+      return[{name:'Choice',subs:'Age, Gender, Occasion',max:5},{name:'Singing',subs:'Style, Tone, Diction, Projection',max:25},{name:'Soloist',subs:'Voice, Leadership',max:10},{name:'Performance Technique',subs:'Instruments, Body movement, Formation, Choreography',max:40},{name:'Overall Musicianship',subs:'Execution, Stage Presence, Entertainment',max:20}];
+    }
+    if(cat.includes('Set Verse'))return[{name:'Voice',subs:'Phrasing, Tone, Articulation, Balance, Projection',max:30},{name:'Presentation',subs:'Mastery, Stage Presence, Fluency, Expression, Gestures, Rhythm',max:60},{name:'Interpretation',subs:'Credibility, Communicative Impact, Entertainment',max:10}];
+    if(cat.includes('Own Composition'))return[{name:'Script',subs:'Originality, Creativity, Poesy, Relevance',max:10},{name:'Signing/Voicing',subs:'Phrasing, Body Language, Articulation, Uniformity',max:40},{name:'Presentation',subs:'Mastery, Stage Presence, Fluency, Facial Expressions',max:50},{name:'Interpretation',subs:'Credibility, Communicative Impact, Entertainment',max:10}];
+    if(cat.includes('Music'))return[{name:'Voice',subs:'Tone, Articulation, Balance, Projection, Blend',max:20},{name:'Technique',subs:'Phrasing, Posture, Diction, Execution',max:30},{name:'Interpretation',subs:'Dynamics, Expression, Tempo/Rhythm, Pitch, Style',max:30},{name:'Overall Musicianship',subs:'Stage Presence, Poise, Confidence, Entertainment',max:20}];
+  }
+  // English (default)
+  if(cat==='Set Verse')return[{name:'Voice',subs:'Phrasing, Tone, Intonation, Articulation, Projection',max:30},{name:'Presentation',subs:'Mastery of text, Stage Presence, Fluency, Expressions, Gestures, Rhythm, Pace',max:60},{name:'Interpretation',subs:'Credibility, Communicative Impact, Entertainment',max:10}];
+  if(cat==='Composition')return[{name:'Script',subs:'Originality, Creativity, Poesy, Relevance, Appropriateness',max:20},{name:'Voice',subs:'Phrasing, Tone, Intonation, Articulation, Projection',max:30},{name:'Presentation',subs:'Mastery, Stage Presence, Fluency, Expressions, Gestures, Rhythm, Pace',max:40},{name:'Interpretation',subs:'Credibility, Communicative Impact, Entertainment',max:10}];
+  if(cat==='Public Speaking')return[{name:'Voice',subs:'Phrasing, Tone, Intonation, Articulation, Projection',max:30},{name:'Presentation',subs:'Mastery of theme, Stage Presence, Fluency/Oracy, Expressions, Gestures, Rhythm, Pace, Logical flow',max:60},{name:'Interpretation',subs:'Credibility, Communicative Impact, Entertainment',max:10}];
+  return[];
+}
+function getGrade(s){
+  if(s>=85)return{label:'Excellent',cls:'pill-green'};
+  if(s>=70)return{label:'Good',cls:'pill-blue'};
+  if(s>=55)return{label:'Fair',cls:'pill-gold'};
+  return{label:'Needs Work',cls:'pill-red'};
+}
+
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let currentUser=null,currentRole=null,currentUName='',currentUserLang='';
+let allScores=[],allEntries=[],allPublished=[],allUsers=[];
+let admLbFilter='All',adjLbFilter='All',admPubFilter='All',adjPubFilter='All',pubOnlyFilter='All';
+let selectedAdjEntry=null,adjCurrentScores={};
+let joinMode=null,joinLang=''; // for the join/register screen
+
+// ══════════════════════════════════════════════════════
+// URL ROUTING — handles ?mode=submit|public|join&lang=X
+// ══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  const params=new URLSearchParams(window.location.search);
+  const mode=params.get('mode');
+  if(mode==='submit'){showSubmissionPortal();return;}
+  if(mode==='public'){showPublicShell();return;}
+  if(mode==='join'){
+    joinMode='adjudicator';
+    joinLang=params.get('lang')||'';
+    showJoinScreen('adjudicator',joinLang);
+    return;
+  }
+  document.getElementById('loginScreen').style.display='flex';
+  updateSubCategory();
+});
+
+// ══════════════════════════════════════════════════════
+// AUTH STATE
+// ══════════════════════════════════════════════════════
+auth.onAuthStateChanged(async user=>{
+  if(user){
+    try{
+      const snap=await usersRef.child(user.uid).get();
+      const data=snap.val()||{};
+      currentRole=data.role||'adjudicator';
+      currentUName=data.name||user.email;
+      currentUserLang=data.language||'';
+      currentUser=user;
+      routeToPortal();
+    }catch(e){
+      currentRole='adjudicator';currentUName=user.email;currentUser=user;
+      routeToPortal();
+    }
+  }
+});
+
+// ══════════════════════════════════════════════════════
+// SIGN IN
+// ══════════════════════════════════════════════════════
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPassword').value;
+  const btn=document.getElementById('loginBtn');
+  if(!email||!pass){showLoginErr('Please enter email and password.');return;}
+  btn.textContent='Signing in…';btn.disabled=true;
+  try{
+    await auth.signInWithEmailAndPassword(email,pass);
+    document.getElementById('loginError').classList.add('hidden');
+  }catch(e){showLoginErr(friendlyAuthErr(e.code));}
+  btn.textContent='Sign In →';btn.disabled=false;
+}
+function showLoginErr(msg){const el=document.getElementById('loginError');el.textContent=msg;el.classList.remove('hidden');}
+function friendlyAuthErr(code){return({'auth/user-not-found':'No account found with this email.','auth/wrong-password':'Incorrect password.','auth/invalid-email':'Please enter a valid email address.','auth/too-many-requests':'Too many attempts. Please try again later.','auth/invalid-credential':'Invalid email or password. Please check and try again.'})[code]||'Login failed. Please check your details and try again.';}
+
+async function doLogout(){
+  await auth.signOut();
+  currentUser=null;currentRole=null;currentUName='';currentUserLang='';
+  allScores=[];allEntries=[];allPublished=[];allUsers=[];
+  hideAll();
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('loginEmail').value='';
+  document.getElementById('loginPassword').value='';
+}
+
+// ══════════════════════════════════════════════════════
+// JOIN / SELF-REGISTER (adjudicator via invite link)
+// ══════════════════════════════════════════════════════
+function showJoinScreen(type, lang){
+  hideAll();
+  const el=document.getElementById('joinScreen');el.style.display='flex';el.classList.remove('hidden');
+  const langInfo=document.getElementById('joinLangInfo');
+  if(lang){
+    langInfo.classList.remove('hidden');
+    document.getElementById('joinLangLabel').textContent=lang;
+  } else {
+    langInfo.classList.add('hidden');
+  }
+  // Adjudicator type styling
+  document.getElementById('joinTitle').textContent='Join as Adjudicator';
+  document.getElementById('joinSubtitle').textContent="You've been invited to join the Kenya Music Festival adjudication team. Create your account below — you'll be able to sign in with these credentials going forward.";
+  document.getElementById('joinBadge').className='join-badge adj';
+  document.getElementById('joinBadge').textContent='Adjudicator Registration';
+  document.getElementById('joinIcon').style.background='linear-gradient(135deg,var(--blue),#1D4ED8)';
+  document.getElementById('joinIcon').textContent='✏️';
+  document.getElementById('joinError').classList.add('hidden');
+  document.getElementById('joinSuccess').classList.add('hidden');
+  document.getElementById('joinForm').style.display='';
+}
+
+async function doJoinRegister(){
+  const name=document.getElementById('join-name').value.trim();
+  const email=document.getElementById('join-email').value.trim();
+  const pass=document.getElementById('join-pass').value;
+  const pass2=document.getElementById('join-pass2').value;
+  const btn=document.getElementById('joinBtn');
+  const errEl=document.getElementById('joinError');
+  const sucEl=document.getElementById('joinSuccess');
+  errEl.classList.add('hidden');sucEl.classList.add('hidden');
+  if(!name){errEl.textContent='Please enter your full name.';errEl.classList.remove('hidden');return;}
+  if(!email){errEl.textContent='Please enter your email address.';errEl.classList.remove('hidden');return;}
+  if(pass.length<6){errEl.textContent='Password must be at least 6 characters.';errEl.classList.remove('hidden');return;}
+  if(pass!==pass2){errEl.textContent='Passwords do not match.';errEl.classList.remove('hidden');return;}
+  btn.textContent='Creating account…';btn.disabled=true;
+  try{
+    // Use secondary auth so we don't accidentally sign out anyone
+    await secondaryAuth.createUserWithEmailAndPassword(email,pass);
+    const uid=secondaryAuth.currentUser.uid;
+    await usersRef.child(uid).set({name,email,role:'adjudicator',language:joinLang||'',createdAt:Date.now(),createdBy:'self-invite'});
+    await secondaryAuth.signOut();
+    sucEl.textContent='✅ Account created! You can now sign in with your email and password.';
+    sucEl.classList.remove('hidden');
+    document.getElementById('joinForm').style.display='none';
+    // Auto-fill login fields for convenience
+    document.getElementById('loginEmail').value=email;
+    document.getElementById('loginPassword').value='';
+  }catch(e){
+    const msgs={'auth/email-already-in-use':'An account with this email already exists. Please sign in instead.','auth/invalid-email':'Please enter a valid email address.','auth/weak-password':'Password is too weak. Use at least 6 characters.'};
+    errEl.textContent=msgs[e.code]||'Error: '+e.message;
+    errEl.classList.remove('hidden');
+  }
+  btn.textContent='Create Account →';btn.disabled=false;
+}
+
+// ══════════════════════════════════════════════════════
+// SCREEN ROUTING
+// ══════════════════════════════════════════════════════
+function hideAll(){
+  ['adminShell','adjShell','publicOnlyShell','joinScreen'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.style.display='none';el.classList.add('hidden');}
+  });
+  document.getElementById('loginScreen').style.display='none';
+  const sp=document.getElementById('submissionPortal');sp.style.display='none';sp.classList.add('hidden');
+}
+function routeToPortal(){
+  hideAll();
+  if(currentRole==='admin'){
+    const sh=document.getElementById('adminShell');sh.classList.remove('hidden');sh.style.display='block';
+    document.getElementById('adminUserName').textContent=currentUName;
+    const lk=window.location.origin+window.location.pathname+'?mode=submit';
+    const el=document.getElementById('adminShareLink');if(el)el.textContent=lk;
+    renderInviteLinks();
+    startAdminListeners();
+    initPublishFilters();
+  } else {
+    const sh=document.getElementById('adjShell');sh.classList.remove('hidden');sh.style.display='block';
+    document.getElementById('adjUserName').textContent=currentUName;
+    const lb=document.getElementById('adjLangBadge');
+    if(lb&&currentUserLang){lb.textContent=currentUserLang;lb.style.display='';}
+    startAdjListeners();
+    adjUpdateCategory();
+    document.getElementById('af-date').value=new Date().toISOString().split('T')[0];
+    if(currentUserLang){
+      const lf=document.getElementById('adjQueueLang');if(lf)lf.value=currentUserLang;
+      const af=document.getElementById('af-lang');if(af){af.value=currentUserLang;adjUpdateCategory();}
+    }
+  }
+}
+function showSubmissionPortal(){hideAll();const el=document.getElementById('submissionPortal');el.style.display='flex';el.classList.remove('hidden');updateSubCategory();}
+function showPublicShell(){hideAll();const el=document.getElementById('publicOnlyShell');el.classList.remove('hidden');el.style.display='block';startPublicListener();}
+function backToLogin(){hideAll();document.getElementById('loginScreen').style.display='flex';}
+
+// ══════════════════════════════════════════════════════
+// FIREBASE LISTENERS
+// ══════════════════════════════════════════════════════
+function startAdminListeners(){
+  scoresRef.on('value',snap=>{allScores=[];snap.forEach(c=>allScores.push({id:c.key,...c.val()}));allScores.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));document.getElementById('adminScoreBadge').textContent=allScores.length;refreshAdminViews();});
+  entriesRef.on('value',snap=>{allEntries=[];snap.forEach(c=>allEntries.push({id:c.key,...c.val()}));allEntries.sort((a,b)=>(b.submittedAt||0)-(a.submittedAt||0));updateAdminEntryBadges();renderInbox();});
+  publishedRef.on('value',snap=>{allPublished=[];snap.forEach(c=>allPublished.push({key:c.key,...c.val()}));document.getElementById('adminPublishedBadge').textContent=allPublished.length;document.getElementById('adm-stat-published').textContent=allPublished.length;renderPublicResults('adminPublicList',admPubFilter);});
+  usersRef.on('value',snap=>{allUsers=[];snap.forEach(c=>allUsers.push({uid:c.key,...c.val()}));renderUsers();});
+  db.ref('.info/connected').on('value',s=>{const d=document.querySelector('#adminShell .status-dot');if(d){d.style.background=s.val()?'var(--green)':'var(--red)';d.style.boxShadow=s.val()?'0 0 7px var(--green)':'0 0 7px var(--red)';}document.getElementById('adminConnStatus').textContent=s.val()?'Live':'Offline';});
+}
+function startAdjListeners(){
+  scoresRef.on('value',snap=>{allScores=[];snap.forEach(c=>allScores.push({id:c.key,...c.val()}));allScores.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));const mine=allScores.filter(s=>s.submittedBy===currentUName);document.getElementById('adjMyScoresBadge').textContent=mine.length;renderAdjMyScores();renderAdjLeaderboard();renderPublicResults('adjPublicList',adjPubFilter);});
+  entriesRef.on('value',snap=>{allEntries=[];snap.forEach(c=>allEntries.push({id:c.key,...c.val()}));allEntries.sort((a,b)=>(b.submittedAt||0)-(a.submittedAt||0));renderAdjQueue();});
+  publishedRef.on('value',snap=>{allPublished=[];snap.forEach(c=>allPublished.push({key:c.key,...c.val()}));renderPublicResults('adjPublicList',adjPubFilter);});
+}
+function startPublicListener(){
+  publishedRef.on('value',snap=>{allPublished=[];snap.forEach(c=>allPublished.push({key:c.key,...c.val()}));renderPublicResults('publicResultsListPublic',pubOnlyFilter);});
+}
+function refreshAdminViews(){renderAdminDashboard();renderAdminResults();renderAdminLeaderboard();loadPublishView();}
+function updateAdminEntryBadges(){
+  const pending=allEntries.filter(e=>e.status==='pending').length;
+  const pb=document.getElementById('adminPendingBadge');if(pb){pb.textContent=pending;pb.style.display=pending>0?'':'none';}
+  document.getElementById('adm-stat-pending').textContent=pending;
+  document.getElementById('adm-stat-approved').textContent=allEntries.filter(e=>e.status==='approved').length;
+  document.getElementById('adm-stat-scored').textContent=allEntries.filter(e=>e.status==='scored').length;
+}
+
+// ══════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════
+function adminNav(page,el){
+  document.querySelectorAll('#adminShell .page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('admin-page-'+page).classList.add('active');
+  document.querySelectorAll('#adminShell .nav-item').forEach(n=>n.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(page==='publishing')loadPublishView();
+  if(page==='public')renderPublicResults('adminPublicList',admPubFilter);
+  if(page==='inbox')renderInbox();
+  if(page==='allresults')renderAdminResults();
+  if(page==='leaderboard')renderAdminLeaderboard();
+  if(page==='users')renderUsers();
+  if(page==='invite')renderInviteLinks();
+}
+function adjNav(page,el){
+  document.querySelectorAll('#adjShell .page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('adj-page-'+page).classList.add('active');
+  document.querySelectorAll('#adjShell .nav-item').forEach(n=>n.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(page==='queue')renderAdjQueue();
+  if(page==='myscores')renderAdjMyScores();
+  if(page==='leaderboard')renderAdjLeaderboard();
+  if(page==='public')renderPublicResults('adjPublicList',adjPubFilter);
+}
+
+// ══════════════════════════════════════════════════════
+// INVITE LINKS
+// ══════════════════════════════════════════════════════
+function getBaseUrl(){return window.location.origin+window.location.pathname;}
+function getInviteLink(type,lang){
+  const b=getBaseUrl();
+  if(type==='school')return b+'?mode=submit';
+  if(type==='public')return b+'?mode=public';
+  if(type==='adj')return b+'?mode=join'+(lang?'&lang='+encodeURIComponent(lang):'');
+  return b;
+}
+function renderInviteLinks(){
+  // School link
+  const sl=document.getElementById('schoolLinkDisplay');if(sl)sl.textContent=getInviteLink('school');
+  // Public link
+  const pl=document.getElementById('publicLinkDisplay');if(pl)pl.textContent=getInviteLink('public');
+  // Adjudicator per-language links
+  const container=document.getElementById('adjInviteLinks');if(!container)return;
+  const langRows=[{lang:'',label:'All Languages (General)',icon:'🌐'},...ALL_LANGS.map(l=>({lang:l,label:l,icon:{English:'🇬🇧',Kiswahili:'🇰🇪',French:'🇫🇷',German:'🇩🇪',Arabic:'🇸🇦',SNE:'♿'}[l]||'🎵'}))];
+  container.innerHTML=langRows.map(({lang,label,icon})=>{
+    const link=getInviteLink('adj',lang);
+    const safeLang=lang||'general';
+    return`<div style="padding-bottom:0.9rem;border-bottom:1px solid rgba(255,255,255,0.05);margin-bottom:0.2rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem">
+        <span style="font-size:1.1rem">${icon}</span>
+        <span style="font-weight:600;font-size:0.85rem">${label}</span>
+        ${lang?`<span class="badge badge-blue" style="font-size:0.6rem">${lang}</span>`:'<span class="badge badge-gold" style="font-size:0.6rem">All</span>'}
+      </div>
+      <div class="link-row">
+        <div class="link-display" style="font-size:0.67rem">${link}</div>
+      </div>
+      <div class="share-btns">
+        <button class="share-btn share-wa" onclick="shareWhatsAppAdj('${encodeURIComponent(link)}','${label}')">📲 WhatsApp</button>
+        <button class="share-btn share-sms" onclick="shareSMSAdj('${encodeURIComponent(link)}','${label}')">💬 SMS</button>
+        <button class="share-btn share-copy" onclick="navigator.clipboard.writeText('${link}').then(()=>toast('${label} link copied!','success'))">📋 Copy</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function copyLink(type){
+  const link=getInviteLink(type);
+  navigator.clipboard.writeText(link).then(()=>toast(type==='school'?'School submission link copied!':'Public results link copied!','success'));
+}
+function shareWhatsApp(type){
+  const link=getInviteLink(type);
+  const msgs={school:`📝 *Kenya Music Festival — School Entry Submission*\n\nSubmit your school's competition entry using this link (no login needed):\n${link}`,public:`🏆 *Kenya Music Festival — Official Results*\n\nView the official published results here:\n${link}`};
+  window.open('https://wa.me/?text='+encodeURIComponent(msgs[type]||link),'_blank');
+}
+function shareSMS(type){
+  const link=getInviteLink(type);
+  const msgs={school:`KMF School Entry: ${link}`,public:`KMF Results: ${link}`};
+  window.open('sms:?body='+encodeURIComponent(msgs[type]||link));
+}
+function shareWhatsAppAdj(encodedLink,label){
+  const link=decodeURIComponent(encodedLink);
+  const msg=`✏️ *Kenya Music Festival — Adjudicator Invitation*\n\nYou've been invited to join the adjudication team${label&&label!=='All Languages (General)'?' for '+label:''}.\n\nClick the link below to create your account:\n${link}\n\n_Kenya Music Festival Adjudication System_`;
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+function shareSMSAdj(encodedLink,label){
+  const link=decodeURIComponent(encodedLink);
+  window.open('sms:?body='+encodeURIComponent(`KMF Adjudicator Invite${label&&label!=='All Languages (General)'?' ('+label+')':''}: ${link}`));
+}
+function copySubmitLink(){navigator.clipboard.writeText(getInviteLink('school')).then(()=>toast('School submission link copied!','success'));}
+
+// ══════════════════════════════════════════════════════
+// SUBMISSION PORTAL
+// ══════════════════════════════════════════════════════
+function updateSubCategory(){
+  const lang=document.getElementById('sub-lang')?.value||'English';
+  const sel=document.getElementById('sub-category');
+  if(sel)sel.innerHTML=CATEGORIES[lang].map(c=>`<option>${c}</option>`).join('');
+}
+async function submitSchoolEntry(){
+  const school=document.getElementById('sub-school').value.trim();
+  const work=document.getElementById('sub-work').value.trim();
+  if(!school){toast('Please enter school / institution name','error');return;}
+  if(!work){toast('Please enter the work title or topic','error');return;}
+  const btn=document.getElementById('subSubmitBtn');btn.textContent='Submitting…';btn.disabled=true;
+  const entry={school,performer:document.getElementById('sub-performer').value.trim(),language:document.getElementById('sub-lang').value,category:document.getElementById('sub-category').value,level:document.getElementById('sub-level').value,entryNo:document.getElementById('sub-entryno').value.trim(),work,contact:document.getElementById('sub-contact').value.trim(),phone:document.getElementById('sub-phone').value.trim(),notes:document.getElementById('sub-notes').value.trim(),status:'pending',submittedAt:Date.now()};
+  try{
+    const ref=await entriesRef.push(entry);
+    const refNum=ref.key.slice(-8).toUpperCase();
+    document.getElementById('step2bar').classList.add('done');
+    document.getElementById('subStep1').classList.add('hidden');
+    document.getElementById('subStep2').classList.remove('hidden');
+    document.getElementById('subRefNum').textContent='KMF-'+refNum;
+    document.getElementById('subSummary').innerHTML=`<div><strong>School:</strong> ${entry.school}</div>${entry.performer?`<div><strong>Performer:</strong> ${entry.performer}</div>`:''}<div><strong>Language:</strong> ${entry.language}</div><div><strong>Category:</strong> ${entry.category}</div><div><strong>Level:</strong> ${entry.level}</div><div><strong>Work:</strong> ${entry.work}</div>${entry.entryNo?`<div><strong>Entry No:</strong> ${entry.entryNo}</div>`:''}`;
+  }catch(e){toast('Submission failed: '+e.message,'error');}
+  btn.textContent='📤 Submit Entry';btn.disabled=false;
+}
+function resetSubForm(){
+  document.getElementById('subStep1').classList.remove('hidden');document.getElementById('subStep2').classList.add('hidden');document.getElementById('step2bar').classList.remove('done');
+  ['sub-school','sub-performer','sub-entryno','sub-work','sub-contact','sub-phone','sub-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+}
+
+// ══════════════════════════════════════════════════════
+// ADMIN INBOX
+// ══════════════════════════════════════════════════════
+function renderInbox(){
+  const statusF=document.getElementById('inboxStatusFilter')?.value||'';
+  const langF=document.getElementById('inboxLangFilter')?.value||'';
+  let data=allEntries.filter(e=>(statusF?e.status===statusF:true)&&(langF?e.language===langF:true));
+  ['pending','approved','scored','rejected'].forEach(s=>{const el=document.getElementById('inbox-'+s);if(el)el.textContent=allEntries.filter(e=>e.status===s).length;});
+  document.getElementById('inboxCountBadge').textContent=data.length+' entries';
+  const tbody=document.getElementById('inboxTable');
+  if(!data.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><div class="empty-icon">📥</div><p>No entries match this filter</p></div></td></tr>`;return;}
+  tbody.innerHTML=data.map(e=>{
+    const ref='KMF-'+e.id.slice(-8).toUpperCase();
+    const sc={pending:'status-pending',approved:'status-approved',scored:'status-scored',rejected:'status-rejected'}[e.status]||'status-pending';
+    const actions=e.status==='pending'?`<button class="btn btn-success btn-sm" onclick="approveEntry('${e.id}')">✅ Approve</button> <button class="btn btn-danger btn-sm" onclick="rejectEntry('${e.id}')">❌ Reject</button>`:e.status==='approved'?`<button class="btn btn-danger btn-sm" onclick="rejectEntry('${e.id}')">❌ Reject</button>`:e.status==='rejected'?`<button class="btn btn-blue btn-sm" onclick="approveEntry('${e.id}')">↩ Re-approve</button>`:`<span style="color:var(--green);font-size:0.75rem">✓ Scored</span>`;
+    return`<tr><td class="td-mono">${ref}</td><td><strong>${e.school||'—'}</strong>${e.performer?`<br><span style="font-size:0.7rem;color:var(--muted)">${e.performer}</span>`:''}</td><td>${e.language}</td><td style="font-size:0.8rem">${e.category}</td><td style="font-size:0.8rem">${e.level||'—'}</td><td style="font-size:0.8rem;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.work||'—'}</td><td style="font-size:0.73rem;color:var(--muted)">${e.contact||'—'}${e.phone?'<br>'+e.phone:''}</td><td><span class="badge ${sc}">${e.status}</span></td><td style="white-space:nowrap">${actions}</td></tr>`;
+  }).join('');
+}
+async function approveEntry(id){await entriesRef.child(id).update({status:'approved',reviewedAt:Date.now(),reviewedBy:currentUName});toast('Entry approved — visible in adjudicator queue','success');}
+async function rejectEntry(id){const notes=prompt('Reason for rejection (optional):');if(notes===null)return;await entriesRef.child(id).update({status:'rejected',reviewedAt:Date.now(),reviewedBy:currentUName,rejectionNotes:notes||''});toast('Entry rejected','info');}
+
+// ══════════════════════════════════════════════════════
+// ADJUDICATOR QUEUE
+// ══════════════════════════════════════════════════════
+function renderAdjQueue(){
+  const langF=document.getElementById('adjQueueLang')?.value||'';
+  const levelF=document.getElementById('adjQueueLevel')?.value||'';
+  let data=allEntries.filter(e=>e.status==='approved'||e.status==='scored');
+  if(langF)data=data.filter(e=>e.language===langF);
+  if(levelF)data=data.filter(e=>e.level===levelF);
+  data.sort((a,b)=>a.status===b.status?(b.submittedAt||0)-(a.submittedAt||0):a.status==='approved'?-1:1);
+  const ready=data.filter(e=>e.status==='approved').length;
+  document.getElementById('adjQueueBadge').textContent=ready;
+  const qc=document.getElementById('adjQueueCount');if(qc)qc.textContent=ready+' ready to score';
+  const container=document.getElementById('adjQueueList');
+  if(!data.length){container.innerHTML=`<div class="empty"><div class="empty-icon">📥</div><p>No approved entries in your queue yet.</p></div>`;return;}
+  container.innerHTML=data.map(e=>{
+    const isSelected=selectedAdjEntry&&selectedAdjEntry.id===e.id;
+    const isScored=e.status==='scored';
+    const cls=`eq-item${isSelected?' selected':''}${isScored?' scored':''}`;
+    const sTag=isScored?`<span class="badge badge-green" style="flex-shrink:0">✓ Scored</span>`:`<span class="badge badge-blue" style="flex-shrink:0">Ready</span>`;
+    const clickAttr=isScored?'':`onclick="selectAdjEntry('${e.id}')"`;
+    return`<div class="${cls}" ${clickAttr}><div class="eq-num">${e.entryNo||'—'}</div><div class="eq-info"><div class="eq-name">${e.school||'—'}${e.performer?' — '+e.performer:''}</div><div class="eq-meta">${e.language} · ${e.category} · ${e.level||''} · ${e.work||'—'}</div></div>${sTag}${isSelected?'<span style="color:var(--gold);font-size:0.78rem;white-space:nowrap">← Scoring now</span>':''}</div>`;
+  }).join('');
+}
+function selectAdjEntry(id){
+  const entry=allEntries.find(e=>e.id===id);
+  if(!entry||entry.status==='scored')return;
+  selectedAdjEntry=entry;
+  document.getElementById('af-lang').value=entry.language;
+  document.getElementById('af-level').value=entry.level||'Sub County';
+  adjUpdateCategory();
+  setTimeout(()=>{document.getElementById('af-category').value=entry.category;adjBuildScoreSheet();},80);
+  document.getElementById('af-institution').value=entry.school+(entry.performer?' — '+entry.performer:'');
+  document.getElementById('af-entry').value=entry.entryNo||'';
+  document.getElementById('af-work').value=entry.work||'';
+  document.getElementById('adjSelBanner').classList.remove('hidden');
+  document.getElementById('adjSelName').textContent=entry.school+(entry.performer?' — '+entry.performer:'');
+  document.getElementById('adjSelMeta').textContent=entry.language+' · '+entry.category+' · '+entry.level+' · Entry '+(entry.entryNo||'—');
+  document.getElementById('adjEntrySourceBadge').classList.remove('hidden');
+  renderAdjQueue();
+  adjNav('score',document.querySelector('#adjShell .nav-item:nth-child(2)'));
+}
+function clearAdjSelection(){selectedAdjEntry=null;document.getElementById('adjSelBanner').classList.add('hidden');document.getElementById('adjEntrySourceBadge').classList.add('hidden');renderAdjQueue();}
+
+// ══════════════════════════════════════════════════════
+// SCORE SHEET
+// ══════════════════════════════════════════════════════
+function adjUpdateCategory(){
+  const lang=document.getElementById('af-lang')?.value||'English';
+  const sel=document.getElementById('af-category');
+  if(sel)sel.innerHTML=CATEGORIES[lang].map(c=>`<option>${c}</option>`).join('');
+  adjBuildScoreSheet();
+}
+function adjBuildScoreSheet(){
+  const lang=document.getElementById('af-lang')?.value||'English';
+  const cat=document.getElementById('af-category')?.value||'';
+  if(!cat)return;
+  document.getElementById('adjSheetLang').textContent=lang;
+  document.getElementById('adjSheetTitle').textContent=cat+' — Criteria';
+  const criteria=getCriteria(lang,cat);
+  adjCurrentScores={};
+  criteria.forEach(c=>{adjCurrentScores[c.name]=0;});
+  document.getElementById('adjScoreRows').innerHTML=criteria.map(c=>{
+    const sid='aslider_'+c.name.replace(/[^a-zA-Z0-9]/g,'_');
+    const vid='aval_'+c.name.replace(/[^a-zA-Z0-9]/g,'_');
+    return`<div class="score-row"><div><div class="score-name">${c.name}</div><div class="score-sub">${c.subs}</div></div><input type="range" class="score-slider" min="0" max="${c.max}" value="0" id="${sid}" oninput="adjUpdateScore('${c.name}',${c.max},this)"><div><div class="score-val" id="${vid}">0</div><div class="score-max">/ ${c.max}</div></div></div>`;
+  }).join('');
+  adjRecalcTotal();
+}
+function adjUpdateScore(name,max,el){
+  adjCurrentScores[name]=parseInt(el.value);
+  const vid='aval_'+name.replace(/[^a-zA-Z0-9]/g,'_');
+  document.getElementById(vid).textContent=el.value;
+  el.style.setProperty('--pct',(el.value/max)*100+'%');
+  adjRecalcTotal();
+}
+function adjRecalcTotal(){
+  const total=Object.values(adjCurrentScores).reduce((a,b)=>a+b,0);
+  document.getElementById('adjTotalNum').textContent=total;
+  const g=getGrade(total);
+  const pill=document.getElementById('adjGradePill');
+  pill.textContent=g.label;pill.className='score-grade-pill '+g.cls;
+}
+async function adjSubmitScore(){
+  const institution=document.getElementById('af-institution').value.trim();
+  if(!institution){toast('Enter performer / institution name','error');return;}
+  const total=Object.values(adjCurrentScores).reduce((a,b)=>a+b,0);
+  const entry={level:document.getElementById('af-level').value,language:document.getElementById('af-lang').value,category:document.getElementById('af-category').value,institution,class:document.getElementById('af-class').value,entryNo:document.getElementById('af-entry').value,work:document.getElementById('af-work').value,adjudicator1:document.getElementById('af-adj1').value,adjudicator2:document.getElementById('af-adj2').value,date:document.getElementById('af-date').value,scores:{...adjCurrentScores},totalScore:total,position:document.getElementById('af-position').value,remarks:document.getElementById('af-remarks').value,submittedBy:currentUName,entryId:selectedAdjEntry?selectedAdjEntry.id:null,timestamp:Date.now()};
+  try{
+    await scoresRef.push(entry);
+    if(selectedAdjEntry){await entriesRef.child(selectedAdjEntry.id).update({status:'scored',scoredAt:Date.now(),scoredBy:currentUName});selectedAdjEntry=null;document.getElementById('adjSelBanner').classList.add('hidden');document.getElementById('adjEntrySourceBadge').classList.add('hidden');}
+    toast(`Score saved — ${institution} · ${total}/100`,'success');
+    adjClearForm();
+    adjNav('queue',document.querySelector('#adjShell .nav-item'));
+  }catch(e){toast('Error: '+e.message,'error');}
+}
+function adjClearForm(){
+  ['af-institution','af-class','af-entry','af-work','af-adj1','af-adj2','af-remarks','af-position'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('af-date').value=new Date().toISOString().split('T')[0];
+  adjBuildScoreSheet();
+}
+
+// ══════════════════════════════════════════════════════
+// ADJ MY SCORES
+// ══════════════════════════════════════════════════════
+function renderAdjMyScores(){
+  const mine=allScores.filter(s=>s.submittedBy===currentUName);
+  const tbody=document.getElementById('adjMyScoresTable');
+  if(!mine.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-icon">📋</div><p>No scores submitted yet</p></div></td></tr>`;return;}
+  tbody.innerHTML=mine.map(s=>{const g=getGrade(s.totalScore);return`<tr><td class="td-mono">${s.entryNo||'—'}</td><td><strong>${s.institution||'—'}</strong><br><span style="font-size:0.7rem;color:var(--muted)">${s.work||''}</span></td><td>${s.language}</td><td style="font-size:0.8rem">${s.category}</td><td style="font-size:0.8rem">${s.level||'—'}</td><td><span class="score-pill ${g.cls}">${s.totalScore}/100</span></td><td style="font-size:0.8rem;color:var(--muted)">${g.label}</td><td style="font-size:0.8rem;color:var(--muted)">${s.date||'—'}</td></tr>`;}).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// ADMIN DASHBOARD
+// ══════════════════════════════════════════════════════
+function renderAdminDashboard(){
+  document.getElementById('adm-stat-scored').textContent=allScores.length;
+  const recent=allScores.slice(0,6);
+  const recentEl=document.getElementById('adm-recentList');
+  recentEl.innerHTML=recent.length?recent.map(s=>{const g=getGrade(s.totalScore);return`<div style="display:flex;align-items:center;justify-content:space-between;padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.04)"><div><div style="font-size:0.85rem;font-weight:500">${s.institution||'—'}</div><div style="font-size:0.7rem;color:var(--muted)">${s.language} · ${s.category} · by ${s.submittedBy||'—'}</div></div><span class="score-pill ${g.cls}">${s.totalScore}</span></div>`;}).join(''):`<div class="empty"><div class="empty-icon">📋</div><p>No scores yet</p></div>`;
+  const langCounts={};allScores.forEach(s=>{langCounts[s.language]=(langCounts[s.language]||0)+1;});
+  const maxC=Math.max(...Object.values(langCounts),1);
+  const colors={English:'var(--gold)',Kiswahili:'var(--green)',French:'var(--blue)',German:'var(--purple)',Arabic:'var(--orange)',SNE:'var(--pink)'};
+  document.getElementById('adm-langChart').innerHTML=Object.entries(langCounts).map(([lang,cnt])=>`<div style="margin-bottom:0.7rem"><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.8rem"><span>${lang}</span><span style="color:var(--muted)">${cnt}</span></div><div style="background:#2A2D38;border-radius:4px;height:7px;overflow:hidden"><div style="background:${colors[lang]||'var(--gold)'};height:100%;width:${(cnt/maxC)*100}%;border-radius:4px;transition:width 0.5s"></div></div></div>`).join('')||`<div class="empty"><p>No data yet</p></div>`;
+  const adjCounts={};allScores.forEach(s=>{adjCounts[s.submittedBy]=(adjCounts[s.submittedBy]||0)+1;});
+  document.getElementById('adm-adjActivity').innerHTML=Object.entries(adjCounts).length?Object.entries(adjCounts).sort((a,b)=>b[1]-a[1]).map(([name,cnt])=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.04)"><div style="font-size:0.85rem">${name}</div><span class="badge badge-blue">${cnt} score${cnt!==1?'s':''}</span></div>`).join(''):`<div class="empty"><p>No adjudicator activity yet</p></div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// ADMIN RESULTS
+// ══════════════════════════════════════════════════════
+function renderAdminResults(){
+  const search=(document.getElementById('adm-searchBox')?.value||'').toLowerCase();
+  const langF=document.getElementById('adm-filterLang')?.value||'';
+  const levelF=document.getElementById('adm-filterLevel')?.value||'';
+  let data=allScores.filter(s=>{
+    if(langF&&s.language!==langF)return false;
+    if(levelF&&s.level!==levelF)return false;
+    if(search&&!((s.institution||'').toLowerCase().includes(search)||(s.entryNo||'').toLowerCase().includes(search)||(s.work||'').toLowerCase().includes(search)))return false;
+    return true;
+  });
+  const tbody=document.getElementById('adminResultsTable');
+  if(!data.length){tbody.innerHTML=`<tr><td colspan="10"><div class="empty"><div class="empty-icon">🔍</div><p>No results found</p></div></td></tr>`;return;}
+  tbody.innerHTML=data.map(s=>{const g=getGrade(s.totalScore);return`<tr><td class="td-mono">${s.entryNo||'—'}</td><td><strong>${s.institution||'—'}</strong><br><span style="font-size:0.7rem;color:var(--muted)">${s.work||''}</span></td><td>${s.language}</td><td style="font-size:0.8rem">${s.category}</td><td style="font-size:0.8rem">${s.level||'—'}</td><td><span class="score-pill ${g.cls}">${s.totalScore}/100</span></td><td style="font-size:0.8rem;color:var(--muted)">${g.label}</td><td style="font-size:0.8rem;color:var(--muted)">${s.submittedBy||'—'}</td><td style="font-size:0.8rem;color:var(--muted)">${s.date||'—'}</td><td><button class="btn btn-danger btn-sm" onclick="deleteScore('${s.id}')">Delete</button></td></tr>`;}).join('');
+}
+async function deleteScore(id){if(!confirm('Delete this entry?'))return;await scoresRef.child(id).remove();toast('Entry deleted','info');}
+function exportCSV(){
+  const headers=['Entry No','Institution','Language','Category','Level','Work','Total Score','Grade','Date','Adjudicator 1','Adjudicator 2','Submitted By','Remarks'];
+  const rows=allScores.map(s=>[s.entryNo,s.institution,s.language,s.category,s.level,s.work,s.totalScore,getGrade(s.totalScore).label,s.date,s.adjudicator1,s.adjudicator2,s.submittedBy,s.remarks].map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(','));
+  const csv=[headers.join(','),...rows].join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='kmf_scores_'+new Date().toISOString().split('T')[0]+'.csv';a.click();toast('CSV exported!','success');
+}
+
+// ══════════════════════════════════════════════════════
+// LEADERBOARDS
+// ══════════════════════════════════════════════════════
+function setAdmLbTab(l,el){admLbFilter=l;document.querySelectorAll('#admLbTabs .seg-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderAdminLeaderboard();}
+function setAdjLbTab(l,el){adjLbFilter=l;document.querySelectorAll('#adjLbTabs .seg-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderAdjLeaderboard();}
+function renderAdminLeaderboard(){renderLeaderboard('admLeaderboardList',admLbFilter);}
+function renderAdjLeaderboard(){renderLeaderboard('adjLeaderboardList',adjLbFilter);}
+function renderLeaderboard(cid,filter){
+  const el=document.getElementById(cid);if(!el)return;
+  let data=(filter==='All'?allScores:allScores.filter(s=>s.language===filter));
+  data=[...data].sort((a,b)=>b.totalScore-a.totalScore).slice(0,20);
+  if(!data.length){el.innerHTML=`<div class="empty"><div class="empty-icon">🏆</div><p>No entries yet</p></div>`;return;}
+  const medals=['🥇','🥈','🥉'];const cols=['var(--gold)','#C0C0C0','#CD7F32','var(--blue)'];
+  el.innerHTML=data.map((s,i)=>{
+    const g=getGrade(s.totalScore);const circ=2*Math.PI*30;const off=circ-(s.totalScore/100)*circ;
+    return`<div class="card" style="margin-bottom:0.7rem;padding:0.9rem 1.2rem"><div style="display:flex;align-items:center;gap:1rem"><div style="font-size:1.4rem;width:28px;text-align:center">${medals[i]||`<span style="font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--muted)">#${i+1}</span>`}</div><div class="prog-ring"><svg viewBox="0 0 70 70" width="68" height="68"><circle class="track" cx="35" cy="35" r="30"/><circle class="fill" cx="35" cy="35" r="30" stroke="${cols[i]||'var(--blue)'}" stroke-dasharray="${circ}" stroke-dashoffset="${off}"/></svg><div class="lbl">${s.totalScore}</div></div><div style="flex:1"><div style="font-weight:600;font-size:0.9rem">${s.institution||'—'}</div><div style="font-size:0.7rem;color:var(--muted);margin-top:2px">${s.language} · ${s.category} · ${s.level||''}</div><div style="font-size:0.7rem;color:var(--muted)">Entry ${s.entryNo||'—'} · ${s.work||''}</div></div><div style="text-align:right"><span class="score-pill ${g.cls}">${s.totalScore}/100</span><div style="font-size:0.7rem;color:var(--muted);margin-top:4px">${s.position||''}</div></div></div></div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// PUBLISHING
+// ══════════════════════════════════════════════════════
+function initPublishFilters(){
+  const langSel=document.getElementById('pub-lang');const catSel=document.getElementById('pub-cat');
+  if(catSel&&langSel)catSel.innerHTML=CATEGORIES[langSel.value].map(c=>`<option>${c}</option>`).join('');
+}
+function onPubLangChange(){
+  const langSel=document.getElementById('pub-lang');const catSel=document.getElementById('pub-cat');
+  if(catSel)catSel.innerHTML=CATEGORIES[langSel.value].map(c=>`<option>${c}</option>`).join('');
+  loadPublishView();
+}
+function pubKey(){const l=document.getElementById('pub-lang')?.value||'',c=document.getElementById('pub-cat')?.value||'',v=document.getElementById('pub-level')?.value||'';return`${l}__${c.replace(/[^a-zA-Z0-9]/g,'_')}__${v}`;}
+function loadPublishView(){
+  if(!document.getElementById('admin-page-publishing').classList.contains('active'))return;
+  const lang=document.getElementById('pub-lang')?.value||'',cat=document.getElementById('pub-cat')?.value||'',level=document.getElementById('pub-level')?.value||'';
+  if(!lang||!cat||!level)return;
+  document.getElementById('pubTitle').textContent=`${lang} · ${cat} · ${level}`;
+  const filtered=allScores.filter(s=>s.language===lang&&s.category===cat&&s.level===level).sort((a,b)=>b.totalScore-a.totalScore);
+  document.getElementById('pubCount').textContent=filtered.length+' entries';
+  const existing=allPublished.find(p=>p.key===pubKey());const isLocked=existing?.locked||false;
+  const lb=document.getElementById('lockBanner');const lbtn=document.getElementById('lockBtn');
+  if(isLocked){lb.className='lock-banner locked';lb.innerHTML=`<span>🔒</span><div><strong>Locked</strong> — Results are finalised.</div>`;lbtn.innerHTML='🔓 Unlock';}
+  else{lb.className='lock-banner unlocked';lb.innerHTML=`<span>🔓</span><div><strong>Unlocked</strong> — Scores can still be added.</div>`;lbtn.innerHTML='🔒 Lock';}
+  const advanceMap={};if(existing?.results)Object.values(existing.results).forEach(r=>{if(r.entryKey)advanceMap[r.entryKey]=r.advance||false;});
+  const container=document.getElementById('publishRankedList');
+  if(!filtered.length){container.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><p>No scores for this combination yet</p></div>`;return;}
+  const medals=['🥇','🥈','🥉'];
+  container.innerHTML=filtered.map((s,i)=>{const g=getGrade(s.totalScore);const checked=advanceMap[s.id]?'checked':'';return`<div class="pub-rank-row"><div style="font-size:1.1rem;width:26px;text-align:center">${medals[i]||`<span style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--muted)">#${i+1}</span>`}</div><input type="checkbox" class="advance-check" id="adv-${s.id}" ${checked}><div style="flex:1"><div style="font-weight:500;font-size:0.88rem">${s.institution||'—'}</div><div style="font-size:0.7rem;color:var(--muted);margin-top:2px">Entry ${s.entryNo||'—'} · ${s.work||''}</div></div><span class="score-pill ${g.cls}">${s.totalScore}/100</span><span style="font-size:0.77rem;color:var(--muted);min-width:55px;text-align:right">${g.label}</span>${advanceMap[s.id]?'<span class="advance-label">↑ Advancing</span>':'<span style="width:70px"></span>'}</div>`;}).join('');
+}
+async function toggleLock(){const key=pubKey();const existing=allPublished.find(p=>p.key===key);const isLocked=existing?.locked||false;await publishedRef.child(key).update({locked:!isLocked});toast(isLocked?'Results unlocked':'Results locked 🔒','info');loadPublishView();}
+async function publishSelected(){
+  const lang=document.getElementById('pub-lang')?.value||'',cat=document.getElementById('pub-cat')?.value||'',level=document.getElementById('pub-level')?.value||'';
+  const key=pubKey();const filtered=allScores.filter(s=>s.language===lang&&s.category===cat&&s.level===level).sort((a,b)=>b.totalScore-a.totalScore);
+  if(!filtered.length){toast('No scores to publish','error');return;}
+  const results={};filtered.forEach((s,i)=>{const a=document.getElementById('adv-'+s.id);results[i]={rank:i+1,institution:s.institution,entryNo:s.entryNo,work:s.work,totalScore:s.totalScore,grade:getGrade(s.totalScore).label,position:s.position||'',advance:a?a.checked:false,entryKey:s.id};});
+  await publishedRef.child(key).set({language:lang,category:cat,level,results,locked:true,publishedAt:Date.now(),publishedBy:currentUName});
+  toast(`Published: ${lang} · ${cat} · ${level} 🌍`,'success');loadPublishView();
+}
+
+// ══════════════════════════════════════════════════════
+// PUBLIC RESULTS
+// ══════════════════════════════════════════════════════
+function setAdmPubTab(l,el){admPubFilter=l;document.querySelectorAll('#admPubTabs .seg-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderPublicResults('adminPublicList',admPubFilter);}
+function setAdjPubTab(l,el){adjPubFilter=l;document.querySelectorAll('#adjPubTabs .seg-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderPublicResults('adjPublicList',adjPubFilter);}
+function setPubTab(l,el,cid){pubOnlyFilter=l;el.closest('.seg-tabs').querySelectorAll('.seg-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderPublicResults(cid,l);}
+function renderPublicResults(cid,filter){
+  const el=document.getElementById(cid);if(!el)return;
+  let data=(!filter||filter==='All')?allPublished:allPublished.filter(p=>p.language===filter);
+  if(!data.length){el.innerHTML=`<div class="empty"><div class="empty-icon">🌍</div><p>No published results yet</p></div>`;return;}
+  const medals=['🥇','🥈','🥉'];
+  el.innerHTML=data.map(pub=>{
+    const results=pub.results?Object.values(pub.results).sort((a,b)=>a.rank-b.rank):[];if(!results.length)return'';
+    const pd=pub.publishedAt?new Date(pub.publishedAt).toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'}):'—';
+    return`<div class="pub-results-card"><div class="pub-card-header"><div><strong style="font-size:0.9rem">${pub.language} · ${pub.category}</strong><span class="badge badge-blue" style="margin-left:8px">${pub.level}</span>${pub.locked?'<span class="badge badge-green" style="margin-left:6px">🔒 Finalised</span>':''}</div><div style="font-size:0.7rem;color:var(--muted)">Published ${pd}</div></div>${results.map(r=>`<div class="pub-result-row"><div style="font-size:1.2rem;width:30px;text-align:center">${medals[r.rank-1]||`<span style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--muted)">#${r.rank}</span>`}</div><div style="flex:1"><div style="font-weight:600;font-size:0.88rem">${r.institution||'—'}</div><div style="font-size:0.7rem;color:var(--muted);margin-top:2px">Entry ${r.entryNo||'—'} · ${r.work||''}</div></div><span class="score-pill ${getGrade(r.totalScore).cls}">${r.totalScore}/100</span><span style="font-size:0.77rem;color:var(--muted);min-width:55px;text-align:right">${r.grade}</span>${r.advance?'<span class="pub-advance-tag">↑ Advances</span>':''}</div>`).join('')}</div>`;
+  }).join('')||`<div class="empty"><div class="empty-icon">🌍</div><p>No published results for this language</p></div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// USERS (view only — accounts created via invite links)
+// ══════════════════════════════════════════════════════
+function renderUsers(){
+  const el=document.getElementById('usersList');if(!el)return;
+  document.getElementById('userCountBadge').textContent=allUsers.length;
+  if(!allUsers.length){el.innerHTML=`<div class="empty"><div class="empty-icon">👥</div><p>No users yet. Share invite links so adjudicators can register themselves.</p></div>`;return;}
+  el.innerHTML=allUsers.map(u=>{
+    const initials=(u.name||u.email||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    const rc=u.role==='admin'?'role-admin':'role-adj';
+    return`<div class="user-row"><div class="user-avatar">${initials}</div><div style="flex:1"><div style="font-weight:500;font-size:0.86rem">${u.name||'—'}</div><div style="font-size:0.7rem;color:var(--muted)">${u.email||''}${u.language?' · '+u.language:''}</div></div><span class="role-tag ${rc}">${u.role||'adjudicator'}</span>${currentRole==='admin'&&u.uid!==currentUser?.uid?`<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.uid}')">Remove</button>`:''}</div>`;
+  }).join('');
+}
+async function deleteUser(uid){if(!confirm('Remove this user?'))return;await usersRef.child(uid).remove();toast('User removed','info');}
+
+// ══════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════
+function toast(msg,type='info'){
+  const el=document.createElement('div');el.className=`toast ${type}`;
+  el.innerHTML=`<span>${{success:'✅',error:'❌',info:'ℹ️'}[type]||'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(()=>el.remove(),3800);
+}
+</script>
+<!-- Code injected by live-server -->
+<script>
+	// <![CDATA[  <-- For SVG support
+	if ('WebSocket' in window) {
+		(function () {
+			function refreshCSS() {
+				var sheets = [].slice.call(document.getElementsByTagName("link"));
+				var head = document.getElementsByTagName("head")[0];
+				for (var i = 0; i < sheets.length; ++i) {
+					var elem = sheets[i];
+					var parent = elem.parentElement || head;
+					parent.removeChild(elem);
+					var rel = elem.rel;
+					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+					}
+					parent.appendChild(elem);
+				}
+			}
+			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+			var address = protocol + window.location.host + window.location.pathname + '/ws';
+			var socket = new WebSocket(address);
+			socket.onmessage = function (msg) {
+				if (msg.data == 'reload') window.location.reload();
+				else if (msg.data == 'refreshcss') refreshCSS();
+			};
+			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+				console.log('Live reload enabled.');
+				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+			}
+		})();
+	}
+	else {
+		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+	}
+	// ]]>
+</script>
+</body>
+</html>
