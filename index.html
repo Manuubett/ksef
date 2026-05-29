@@ -1413,6 +1413,364 @@ function toast(msg,type='info'){
 		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
 	}
 	// ]]>
+	// ══════════════════════════════════════════════════════
+// ADMIN DASHBOARD (complete the cut-off function)
+// ══════════════════════════════════════════════════════
+function renderAdminDashboard(){
+  document.getElementById('adm-stat-scored').textContent=allScores.length;
+  const recent=allScores.slice(0,6);
+  const recentEl=document.getElementById('adm-recentList');
+  recentEl.innerHTML=recent.length?recent.map(s=>{const g=getGrade(s.totalScore);return`<div style="display:flex;align-items:center;justify-content:space-between;padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.04)"><div><div style="font-size:0.85rem;font-weight:500">${s.institution||'—'}</div><div style="font-size:0.7rem;color:var(--muted)">${s.language} · ${s.category} · by ${s.submittedBy||'—'}</div></div><span class="score-pill ${g.cls}">${s.totalScore}</span></div>`;}).join(''):`<div class="empty"><div class="empty-icon">📋</div><p>No scores yet</p></div>`;
+
+  // Language breakdown chart
+  const langCounts={};
+  allScores.forEach(s=>{langCounts[s.language]=(langCounts[s.language]||0)+1;});
+  const maxC=Math.max(...Object.values(langCounts),1);
+  const colors={English:'var(--gold)',Kiswahili:'var(--green)',French:'var(--blue)',German:'var(--purple)',Arabic:'var(--orange)',SNE:'var(--pink)'};
+  const chartEl=document.getElementById('adm-langChart');
+  if(!Object.keys(langCounts).length){chartEl.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><p>No scores yet</p></div>`;return;}
+  chartEl.innerHTML=Object.entries(langCounts).map(([lang,count])=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <div style="width:90px;font-size:0.78rem;color:var(--muted);flex-shrink:0">${lang}</div>
+      <div style="flex:1;background:#1A1F2E;border-radius:4px;height:10px;overflow:hidden">
+        <div style="width:${(count/maxC)*100}%;background:${colors[lang]||'var(--gold)'};height:100%;border-radius:4px;transition:width 0.5s"></div>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--gold);width:28px;text-align:right">${count}</div>
+    </div>`).join('');
+
+  // Adjudicator activity
+  const adjCounts={};
+  allScores.forEach(s=>{adjCounts[s.submittedBy]=(adjCounts[s.submittedBy]||0)+1;});
+  const actEl=document.getElementById('adm-adjActivity');
+  if(!Object.keys(adjCounts).length){actEl.innerHTML=`<div class="empty"><div class="empty-icon">👤</div><p>No adjudicator activity yet</p></div>`;return;}
+  actEl.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;">`+
+    Object.entries(adjCounts).sort((a,b)=>b[1]-a[1]).map(([name,count])=>`
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem;">
+        <div style="font-weight:600;font-size:0.85rem;margin-bottom:2px">${name||'Unknown'}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:1.1rem;color:var(--gold)">${count}</div>
+        <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">scores</div>
+      </div>`).join('')+`</div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// ADMIN ALL RESULTS
+// ══════════════════════════════════════════════════════
+function renderAdminResults(){
+  const search=(document.getElementById('adm-searchBox')?.value||'').toLowerCase();
+  const lang=document.getElementById('adm-filterLang')?.value||'';
+  const level=document.getElementById('adm-filterLevel')?.value||'';
+  let data=allScores.filter(s=>
+    (!lang||s.language===lang)&&
+    (!level||s.level===level)&&
+    (!search||(s.institution||'').toLowerCase().includes(search)||(s.work||'').toLowerCase().includes(search)||(s.entryNo||'').toLowerCase().includes(search))
+  );
+  const tbody=document.getElementById('adminResultsTable');
+  if(!data.length){tbody.innerHTML=`<tr><td colspan="10"><div class="empty"><div class="empty-icon">📋</div><p>No scores match this filter</p></div></td></tr>`;return;}
+  tbody.innerHTML=data.map(s=>{
+    const g=getGrade(s.totalScore);
+    return`<tr>
+      <td class="td-mono">${s.entryNo||'—'}</td>
+      <td><strong>${s.institution||'—'}</strong><br><span style="font-size:0.7rem;color:var(--muted)">${s.work||''}</span></td>
+      <td>${s.language}</td>
+      <td style="font-size:0.8rem">${s.category}</td>
+      <td style="font-size:0.8rem">${s.level||'—'}</td>
+      <td><span class="score-pill ${g.cls}">${s.totalScore}/100</span></td>
+      <td style="font-size:0.8rem;color:var(--muted)">${g.label}</td>
+      <td style="font-size:0.8rem">${s.submittedBy||'—'}</td>
+      <td style="font-size:0.78rem;color:var(--muted)">${s.date||'—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteScore('${s.id}')">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function deleteScore(id){
+  if(!confirm('Delete this score permanently?'))return;
+  await scoresRef.child(id).remove();
+  toast('Score deleted','info');
+}
+
+function exportCSV(){
+  if(!allScores.length){toast('No scores to export','info');return;}
+  const headers=['Entry No','Institution','Work','Language','Category','Level','Score','Grade','Adjudicator','Date'];
+  const rows=allScores.map(s=>{
+    const g=getGrade(s.totalScore);
+    return[s.entryNo||'',s.institution||'',s.work||'',s.language||'',s.category||'',s.level||'',s.totalScore,g.label,s.submittedBy||'',s.date||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',');
+  });
+  const csv=[headers.join(','),...rows].join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='kmf_scores_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+  toast('CSV exported','success');
+}
+
+// ══════════════════════════════════════════════════════
+// LEADERBOARDS
+// ══════════════════════════════════════════════════════
+function setAdmLbTab(lang,el){admLbFilter=lang;document.querySelectorAll('#admLbTabs .seg-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderAdminLeaderboard();}
+function setAdjLbTab(lang,el){adjLbFilter=lang;document.querySelectorAll('#adjLbTabs .seg-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderAdjLeaderboard();}
+
+function renderLeaderboard(containerId,langFilter){
+  let data=langFilter==='All'?[...allScores]:allScores.filter(s=>s.language===langFilter);
+  data.sort((a,b)=>b.totalScore-a.totalScore);
+  const container=document.getElementById(containerId);
+  if(!data.length){container.innerHTML=`<div class="empty"><div class="empty-icon">🏆</div><p>No scores yet${langFilter!=='All'?' for '+langFilter:''}</p></div>`;return;}
+  const medals=['🥇','🥈','🥉'];
+  container.innerHTML=data.map((s,i)=>{
+    const g=getGrade(s.totalScore);
+    const medal=i<3?`<span style="font-size:1.4rem">${medals[i]}</span>`:`<span style="font-family:'DM Mono',monospace;font-size:0.85rem;color:var(--muted);width:28px;text-align:center">#${i+1}</span>`;
+    return`<div style="display:flex;align-items:center;gap:1rem;padding:0.85rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04);${i<3?'background:rgba(201,168,76,0.04);':''}">
+      ${medal}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:0.9rem">${s.institution||'—'}</div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-top:2px">${s.language} · ${s.category} · ${s.level||''} · Entry ${s.entryNo||'—'}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <span class="score-pill ${g.cls}" style="font-size:0.9rem">${s.totalScore}/100</span>
+        <div style="font-size:0.68rem;color:var(--muted);margin-top:3px">${g.label}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderAdminLeaderboard(){renderLeaderboard('admLeaderboardList',admLbFilter);}
+function renderAdjLeaderboard(){renderLeaderboard('adjLeaderboardList',adjLbFilter);}
+
+// ══════════════════════════════════════════════════════
+// PUBLISHING (the KEY missing piece)
+// ══════════════════════════════════════════════════════
+function initPublishFilters(){
+  onPubLangChange();
+}
+
+function onPubLangChange(){
+  const lang=document.getElementById('pub-lang')?.value||'English';
+  const catSel=document.getElementById('pub-cat');
+  if(catSel){
+    catSel.innerHTML=CATEGORIES[lang].map(c=>`<option>${c}</option>`).join('');
+  }
+  loadPublishView();
+}
+
+function loadPublishView(){
+  const lang=document.getElementById('pub-lang')?.value||'English';
+  const cat=document.getElementById('pub-cat')?.value||'';
+  const level=document.getElementById('pub-level')?.value||'Sub County';
+  if(!cat)return;
+
+  document.getElementById('pubTitle').textContent=`${lang} · ${cat} · ${level}`;
+
+  // Check lock state
+  const lockKey=`${lang}__${cat}__${level}`.replace(/[^a-zA-Z0-9_]/g,'_');
+  db.ref('kmf_locks/'+lockKey).get().then(snap=>{
+    const locked=snap.val()===true;
+    updateLockUI(locked);
+  });
+
+  // Filter scores for this combo
+  let data=allScores.filter(s=>s.language===lang&&s.category===cat&&s.level===level);
+  data.sort((a,b)=>b.totalScore-a.totalScore);
+
+  document.getElementById('pubCount').textContent=data.length+' entries';
+
+  const container=document.getElementById('publishRankedList');
+  if(!data.length){
+    container.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div><p>No scored entries for ${lang} · ${cat} · ${level}</p></div>`;
+    return;
+  }
+
+  // Check which are already marked to advance
+  const pubKey=`${lang}__${cat}__${level}`.replace(/[^a-zA-Z0-9_]/g,'_');
+  db.ref('kmf_advancing/'+pubKey).get().then(snap=>{
+    const advancing=snap.val()||{};
+    const medals=['🥇','🥈','🥉'];
+    container.innerHTML=data.map((s,i)=>{
+      const g=getGrade(s.totalScore);
+      const isAdv=advancing[s.id]===true;
+      return`<div class="pub-rank-row">
+        <span style="font-size:1.1rem;width:28px;flex-shrink:0">${i<3?medals[i]:'#'+(i+1)}</span>
+        <input type="checkbox" class="advance-check" id="adv_${s.id}" ${isAdv?'checked':''} onchange="toggleAdvancing('${pubKey}','${s.id}',this.checked)">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:0.88rem">${s.institution||'—'}</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:1px">Entry ${s.entryNo||'—'} · ${s.work||'—'} · ${s.submittedBy||'—'}</div>
+        </div>
+        <span class="score-pill ${g.cls}">${s.totalScore}/100</span>
+        ${isAdv?`<span class="advance-label">Advancing ✓</span>`:''}
+      </div>`;
+    }).join('');
+  });
+}
+
+async function toggleAdvancing(pubKey,scoreId,checked){
+  await db.ref('kmf_advancing/'+pubKey+'/'+scoreId).set(checked?true:null);
+}
+
+async function toggleLock(){
+  const lang=document.getElementById('pub-lang')?.value||'English';
+  const cat=document.getElementById('pub-cat')?.value||'';
+  const level=document.getElementById('pub-level')?.value||'Sub County';
+  const lockKey=`${lang}__${cat}__${level}`.replace(/[^a-zA-Z0-9_]/g,'_');
+  const snap=await db.ref('kmf_locks/'+lockKey).get();
+  const currently=snap.val()===true;
+  await db.ref('kmf_locks/'+lockKey).set(!currently);
+  updateLockUI(!currently);
+  toast(!currently?'Results locked — scores cannot be modified':'Results unlocked',!currently?'success':'info');
+}
+
+function updateLockUI(locked){
+  const banner=document.getElementById('lockBanner');
+  const btn=document.getElementById('lockBtn');
+  if(locked){
+    banner.className='lock-banner locked';
+    banner.innerHTML='<span>🔒</span><div><strong>Locked</strong> — Results are finalised. Publish to make public.</div>';
+    if(btn)btn.textContent='🔓 Unlock';
+  } else {
+    banner.className='lock-banner unlocked';
+    banner.innerHTML='<span>🔓</span><div><strong>Unlocked</strong> — Scores can still be modified.</div>';
+    if(btn)btn.textContent='🔒 Lock';
+  }
+}
+
+async function publishSelected(){
+  const lang=document.getElementById('pub-lang')?.value||'English';
+  const cat=document.getElementById('pub-cat')?.value||'';
+  const level=document.getElementById('pub-level')?.value||'Sub County';
+  if(!cat){toast('Please select Language, Category and Level first','error');return;}
+
+  let data=allScores.filter(s=>s.language===lang&&s.category===cat&&s.level===level);
+  data.sort((a,b)=>b.totalScore-a.totalScore);
+
+  if(!data.length){toast('No scored entries found for this selection','error');return;}
+
+  const pubKey=`${lang}__${cat}__${level}`.replace(/[^a-zA-Z0-9_]/g,'_');
+
+  // Get advancing flags
+  const advSnap=await db.ref('kmf_advancing/'+pubKey).get();
+  const advancing=advSnap.val()||{};
+
+  // Build published record
+  const record={
+    language:lang,
+    category:cat,
+    level,
+    publishedAt:Date.now(),
+    publishedBy:currentUName,
+    results:data.map((s,i)=>({
+      rank:i+1,
+      institution:s.institution||'',
+      performer:s.work||'',
+      entryNo:s.entryNo||'',
+      work:s.work||'',
+      totalScore:s.totalScore,
+      grade:getGrade(s.totalScore).label,
+      adjudicator:s.submittedBy||'',
+      date:s.date||'',
+      advancing:advancing[s.id]===true
+    }))
+  };
+
+  await publishedRef.child(pubKey).set(record);
+  toast(`Published ${data.length} results for ${lang} · ${cat} · ${level}!`,'success');
+}
+
+// ══════════════════════════════════════════════════════
+// PUBLIC RESULTS DISPLAY (the function that was cut off)
+// ══════════════════════════════════════════════════════
+function setAdmPubTab(lang,el){admPubFilter=lang;document.querySelectorAll('#admPubTabs .seg-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderPublicResults('adminPublicList',lang);}
+function setAdjPubTab(lang,el){adjPubFilter=lang;document.querySelectorAll('#adjPubTabs .seg-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderPublicResults('adjPublicList',lang);}
+function setPubTab(lang,el,containerId){pubOnlyFilter=lang;const tabs=el.closest('.seg-tabs');if(tabs)tabs.querySelectorAll('.seg-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderPublicResults(containerId,lang);}
+
+function renderPublicResults(containerId,langFilter){
+  const container=document.getElementById(containerId);
+  if(!container)return;
+
+  let data=langFilter==='All'?[...allPublished]:allPublished.filter(p=>p.language===langFilter);
+  // Sort by language, then category, then level
+  const levelOrder={'Sub County':0,'County':1,'Regional':2,'National':3};
+  data.sort((a,b)=>{
+    if(a.language<b.language)return -1;
+    if(a.language>b.language)return 1;
+    if(a.category<b.category)return -1;
+    if(a.category>b.category)return 1;
+    return (levelOrder[a.level]||0)-(levelOrder[b.level]||0);
+  });
+
+  if(!data.length){
+    container.innerHTML=`<div class="empty"><div class="empty-icon">🌍</div><p>No results have been published yet${langFilter!=='All'?' for '+langFilter:''}.</p></div>`;
+    return;
+  }
+
+  const medals=['🥇','🥈','🥉'];
+
+  container.innerHTML=data.map(pub=>{
+    const results=pub.results||[];
+    const resultsHTML=results.length?results.map((r,i)=>{
+      const g=getGrade(r.totalScore);
+      return`<div class="pub-result-row">
+        <span style="font-size:1.1rem;width:28px;flex-shrink:0">${i<3?medals[i]:'#'+(i+1)}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:0.88rem">${r.institution||'—'}</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:1px">Entry ${r.entryNo||'—'} · ${r.work||'—'}</div>
+        </div>
+        <span class="score-pill ${g.cls}" style="flex-shrink:0">${r.totalScore}/100</span>
+        ${r.advancing?`<span class="pub-advance-tag">Advancing</span>`:''}
+      </div>`;
+    }).join(''):`<div class="empty" style="padding:1.5rem"><p>No results in this category</p></div>`;
+
+    const pubDate=pub.publishedAt?new Date(pub.publishedAt).toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'}):'—';
+
+    return`<div class="pub-results-card">
+      <div class="pub-card-header">
+        <div>
+          <span class="badge badge-blue" style="margin-right:6px">${pub.language}</span>
+          <span style="font-weight:600;font-size:0.9rem">${pub.category}</span>
+          <span class="badge badge-gold" style="margin-left:8px">${pub.level}</span>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:0.7rem;color:var(--muted)">Published ${pubDate}</div>
+          <div style="font-size:0.7rem;color:var(--muted)">by ${pub.publishedBy||'Admin'}</div>
+        </div>
+      </div>
+      ${resultsHTML}
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// USERS
+// ══════════════════════════════════════════════════════
+function renderUsers(){
+  const container=document.getElementById('usersList');
+  const badge=document.getElementById('userCountBadge');
+  if(badge)badge.textContent=allUsers.length;
+  if(!allUsers.length){container.innerHTML=`<div class="empty"><div class="empty-icon">👥</div><p>No users yet</p></div>`;return;}
+  container.innerHTML=allUsers.map(u=>{
+    const initials=(u.name||u.email||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    const roleClass=u.role==='admin'?'role-admin':'role-adj';
+    const roleLabel=u.role==='admin'?'Admin':'Adjudicator';
+    return`<div class="user-row">
+      <div class="user-avatar">${initials}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:0.88rem">${u.name||'—'}</div>
+        <div style="font-size:0.72rem;color:var(--muted)">${u.email||''}</div>
+      </div>
+      ${u.language?`<span class="badge badge-blue" style="font-size:0.65rem">${u.language}</span>`:''}
+      <span class="role-tag ${roleClass}">${roleLabel}</span>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════
+function toast(msg,type='info'){
+  const container=document.getElementById('toastContainer');
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;
+  const icons={success:'✅',error:'❌',info:'ℹ️'};
+  el.innerHTML=`<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  container.appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(110%)';el.style.transition='all 0.3s';setTimeout(()=>el.remove(),300);},3500);
+}
 </script>
 </body>
 </html>
