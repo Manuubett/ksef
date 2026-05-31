@@ -424,7 +424,23 @@ tbody td{padding:0.75rem 1rem;vertical-align:middle;}
         <div class="sub-steps"><div class="sub-step done"></div><div class="sub-step" id="step2bar"></div></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
           <div class="form-group" style="grid-column:1/-1"><label>School / Institution Name *</label><input class="form-control" id="sub-school" placeholder="Full name of your school"></div>
-          <div class="form-group" style="grid-column:1/-1"><label>Performer / Participant Name</label><input class="form-control" id="sub-performer" placeholder="Name (leave blank if group)"></div>
+          <div class="form-group"><label>Presentation Type</label>
+  <select class="form-control" id="sub-type" onchange="togglePerformerFields()">
+    <option value="solo">Solo</option>
+    <option value="group">Group / Choir</option>
+  </select>
+</div>
+<div class="form-group" id="solo-field"><label>Participant Name *</label>
+  <input class="form-control" id="sub-performer" placeholder="Full name of participant">
+</div>
+<div id="group-fields" class="hidden">
+  <div class="form-group" style="margin-bottom:0.8rem"><label>Group / Choir Name</label>
+    <input class="form-control" id="sub-groupname" placeholder="e.g. Starehe Boys Choir">
+  </div>
+  <div class="form-group"><label>Participant Names <span style="color:var(--muted);font-weight:400">(one per line)</span></label>
+    <textarea class="form-control" id="sub-groupmembers" rows="4" placeholder="John Kamau&#10;Mary Wanjiku&#10;Peter Odhiambo"></textarea>
+  </div>
+</div>
           <div class="form-group"><label>Language / Section *</label><select class="form-control" id="sub-lang" onchange="updateSubCategory()"><option>English</option><option>Kiswahili</option><option>French</option><option>German</option><option>Arabic</option><option>SNE</option></select></div>
           <div class="form-group"><label>Category *</label><select class="form-control" id="sub-category"></select></div>
           <div class="form-group"><label>Level *</label><select class="form-control" id="sub-level"><option>Sub County</option><option>County</option><option>Regional</option><option>National</option></select></div>
@@ -766,6 +782,31 @@ tbody td{padding:0.75rem 1rem;vertical-align:middle;}
 
 <div class="toast-container" id="toastContainer"></div>
 
+<!-- EDIT SCORE MODAL -->
+<div id="editModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:flex;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.8rem;width:100%;max-width:480px;box-shadow:var(--shadow2);max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;">
+      <h3 style="font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:1.3rem;">Edit Score</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeEditModal()">✕ Close</button>
+    </div>
+    <div id="editModalInfo" style="background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:var(--r2);padding:0.75rem 1rem;margin-bottom:1.2rem;font-size:0.82rem;color:var(--muted);"></div>
+    <div id="editScoreRows" style="margin-bottom:1rem;"></div>
+    <div style="background:rgba(212,168,67,0.05);border:1px solid var(--border);border-radius:var(--r2);padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;">
+      <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;">New Total</div>
+      <div id="editTotalNum" style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--gold);font-weight:700;">0</div>
+      <div id="editGradePill" class="grade-pill pill-gold" style="font-size:0.85rem;">—</div>
+    </div>
+    <div class="form-group" style="margin-bottom:1rem;">
+      <label>Remarks (optional)</label>
+      <textarea class="form-control" id="editRemarks" rows="2" placeholder="Update remarks…"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="saveEditedScore()">💾 Save Changes</button>
+      <button class="btn btn-ghost" onclick="closeEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 // CONFIGURATION
@@ -914,7 +955,16 @@ async function doLogout() {
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPassword').value = '';
 }
-
+function togglePerformerFields() {
+  var type = document.getElementById('sub-type').value;
+  if (type === 'solo') {
+    document.getElementById('solo-field').classList.remove('hidden');
+    document.getElementById('group-fields').classList.add('hidden');
+  } else {
+    document.getElementById('solo-field').classList.add('hidden');
+    document.getElementById('group-fields').classList.remove('hidden');
+  }
+}
 // ══════════════════════════════════════════
 // JOIN
 // ══════════════════════════════════════════
@@ -1138,7 +1188,11 @@ async function submitSchoolEntry() {
   if (!work)   { toast('Please enter work title',  'error'); return; }
   var btn = document.getElementById('subSubmitBtn'); btn.textContent = 'Submitting…'; btn.disabled = true;
   var entry = {
-    school, performer: document.getElementById('sub-performer').value.trim(),
+    school,
+type: document.getElementById('sub-type').value,
+performer: document.getElementById('sub-performer').value.trim(),
+groupName: document.getElementById('sub-groupname').value.trim(),
+groupMembers: document.getElementById('sub-groupmembers').value.trim(),
     language: document.getElementById('sub-lang').value,
     category: document.getElementById('sub-category').value,
     level:    document.getElementById('sub-level').value,
@@ -1169,7 +1223,7 @@ function resetSubForm() {
   document.getElementById('subStep1').classList.remove('hidden');
   document.getElementById('subStep2').classList.add('hidden');
   document.getElementById('step2bar').classList.remove('done');
-  ['sub-school','sub-performer','sub-entryno','sub-work','sub-contact','sub-phone','sub-notes'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  ['sub-school','sub-performer','sub-groupname','sub-groupmembers','sub-entryno','sub-work','sub-contact','sub-phone','sub-notes'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
 }
 
 // ══════════════════════════════════════════
@@ -1381,8 +1435,16 @@ async function adjSubmitScore() {
     totalScore:  total,
     position:    document.getElementById('af-position').value,
     remarks:     document.getElementById('af-remarks').value,
+    performer:    selectedAdjEntry.performer || '',
+    type:         selectedAdjEntry.type || 'solo',
+    groupName:    selectedAdjEntry.groupName || '',
+    groupMembers: selectedAdjEntry.groupMembers || '',
+    performer:   selectedAdjEntry.performer || '',
+    performer:   selectedAdjEntry.performer || '',
+    performer:   selectedAdjEntry.performer || '',
+    performer:   selectedAdjEntry.performer || '',
     submittedBy: currentUName,
-    entryId,
+    entryId:     entryId || null,
     timestamp:   Date.now()
   };
 
@@ -1452,9 +1514,9 @@ async function autoLockAndPublish(entryId, lastScore) {
   var slotKey = keys.find(function(k) { return results[k].entryId === entryId; });
   if (slotKey === undefined) slotKey = String(keys.length);
 
-  results[slotKey] = {
-    rank:         0,  // recalculated below
-    institution:  lastScore.institution,
+results[slotKey] = {
+    rank:         0,
+    institution:  lastScore.institution || '',
     entryNo:      lastScore.entryNo || '',
     work:         lastScore.work || '',
     totalScore:   avg,
@@ -1463,16 +1525,32 @@ async function autoLockAndPublish(entryId, lastScore) {
     grade:        getGrade(avg).label,
     position:     lastScore.position || '',
     advance:      results[slotKey] ? (results[slotKey].advance || false) : false,
-    entryId,
+    entryId:      entryId || '',
+    performer:    lastScore.performer || '',
+    type:         lastScore.type || 'solo',
+    groupName:    lastScore.groupName || '',
+    groupMembers: lastScore.groupMembers || '',
     autoLocked:   true,
     lockedAt:     Date.now()
   };
+
+  // Sanitize ALL results — remove any undefined values before writing
+  function cleanObj(obj) {
+    var clean = {};
+    Object.keys(obj).forEach(function(k) {
+      var v = obj[k];
+      if (v === undefined) return;
+      if (Array.isArray(v)) { clean[k] = v.map(function(x){ return x === undefined ? null : x; }); }
+      else clean[k] = v;
+    });
+    return clean;
+  }
 
   // Re-rank all results in this category by descending average score
   var sorted = Object.values(results).sort(function(a,b) { return b.totalScore - a.totalScore; });
   sorted.forEach(function(r, i) { r.rank = i + 1; });
   var reIndexed = {};
-  sorted.forEach(function(r, i) { reIndexed[String(i)] = r; });
+  sorted.forEach(function(r, i) { reIndexed[String(i)] = cleanObj(r); });
 
   // Write back with locked = true
   await publishedRef.child(pubKeyStr).set({
@@ -1611,11 +1689,154 @@ function renderAdminResults() {
       + '<td style="font-size:0.79rem;color:var(--muted)">'+g.label+'</td>'
       + '<td style="font-size:0.79rem;color:var(--muted)">'+(s.submittedBy||'—')+'</td>'
       + '<td style="font-size:0.79rem;color:var(--muted)">'+(s.date||'—')+'</td>'
-      + '<td><button class="btn btn-danger btn-sm" onclick="deleteScore(\''+s.id+'\')">Delete</button></td>'
+      + '<td style="white-space:nowrap;">'
+      + '<button class="btn btn-blue btn-sm" style="margin-bottom:3px;" onclick="editScore(\''+s.id+'\')">✏️ Edit</button> '
+      + '<button class="btn btn-danger btn-sm" onclick="deleteScore(\''+s.id+'\')">🗑 Delete</button>'
+      + '</td>'
       + '</tr>';
   }).join('');
 }
 async function deleteScore(id) { if (!confirm('Delete this score?')) return; await scoresRef.child(id).remove(); toast('Deleted','info'); }
+
+// ══════════════════════════════════════════
+// SCORE EDITING
+// ══════════════════════════════════════════
+var editingScoreId = null;
+var editCurrentScores = {};
+
+function editScore(id) {
+  var score = allScores.find(function(s){ return s.id === id; });
+  if (!score) return;
+
+  // Check if entry is locked
+  var entryScoreCount = score.entryId ? allScores.filter(function(s){ return s.entryId === score.entryId; }).length : 1;
+  var isLocked = entryScoreCount >= REQUIRED_ADJUDICATORS;
+
+  if (isLocked) {
+    var ok = confirm('This entry is auto-locked ('+REQUIRED_ADJUDICATORS+' adjudicators). Editing will recalculate the average and update published results.\n\nContinue?');
+    if (!ok) return;
+  }
+
+  editingScoreId = id;
+  editCurrentScores = Object.assign({}, score.scores || {});
+
+  // Info banner
+  document.getElementById('editModalInfo').innerHTML =
+    '<strong>'+(score.institution||'—')+'</strong> &nbsp;·&nbsp; '
+    + score.language+' · '+score.category+' · '+(score.level||'—')
+    +'<br>Submitted by: <strong>'+(score.submittedBy||'—')+'</strong>'
+    +(isLocked ? ' &nbsp;<span class="badge bg-green" style="font-size:0.58rem;">🔒 Locked — will recalculate avg</span>' : '');
+
+  // Build score sliders
+  var criteria = getCriteria(score.language, score.category);
+  document.getElementById('editScoreRows').innerHTML = criteria.map(function(c) {
+    var current = editCurrentScores[c.name] || 0;
+    var pct = (current / c.max) * 100;
+    var sid = 'eslider_'+c.name.replace(/[^a-zA-Z0-9]/g,'_');
+    var vid = 'eval_'+c.name.replace(/[^a-zA-Z0-9]/g,'_');
+    return '<div class="score-row">'
+      + '<div><div class="score-name">'+c.name+'</div><div class="score-sub">'+c.subs+'</div></div>'
+      + '<input type="range" class="score-slider" min="0" max="'+c.max+'" value="'+current+'" id="'+sid
+      + '" style="--pct:'+pct+'%" oninput="editUpdateScore(\''+c.name+'\','+c.max+',this)">'
+      + '<div><div class="score-val" id="'+vid+'">'+current+'</div><div class="score-max">/ '+c.max+'</div></div>'
+      + '</div>';
+  }).join('');
+
+  document.getElementById('editRemarks').value = score.remarks || '';
+  editRecalcTotal();
+
+  // Show modal
+  var modal = document.getElementById('editModal');
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+}
+
+function editUpdateScore(name, max, el) {
+  editCurrentScores[name] = parseInt(el.value);
+  document.getElementById('eval_'+name.replace(/[^a-zA-Z0-9]/g,'_')).textContent = el.value;
+  el.style.setProperty('--pct', (el.value/max)*100+'%');
+  editRecalcTotal();
+}
+
+function editRecalcTotal() {
+  var total = Object.values(editCurrentScores).reduce(function(a,b){ return a+b; }, 0);
+  document.getElementById('editTotalNum').textContent = total;
+  var g = getGrade(total);
+  var pill = document.getElementById('editGradePill');
+  pill.textContent = g.label; pill.className = 'grade-pill '+g.cls;
+}
+
+async function saveEditedScore() {
+  if (!editingScoreId) return;
+  var total = Object.values(editCurrentScores).reduce(function(a,b){ return a+b; }, 0);
+  var remarks = document.getElementById('editRemarks').value;
+
+  try {
+    await scoresRef.child(editingScoreId).update({
+      scores:     editCurrentScores,
+      totalScore: total,
+      remarks:    remarks,
+      editedAt:   Date.now(),
+      editedBy:   currentUName
+    });
+
+    // If entry is locked, recalculate and update published average
+    var score = allScores.find(function(s){ return s.id === editingScoreId; });
+    if (score && score.entryId) {
+      var entryScores = allScores.filter(function(s){ return s.entryId === score.entryId; });
+      if (entryScores.length >= REQUIRED_ADJUDICATORS) {
+        // Update the edited score's total in our local copy for recalc
+        var updatedScores = entryScores.map(function(s){
+          return s.id === editingScoreId ? Object.assign({}, s, {totalScore: total}) : s;
+        });
+        var rawScores = updatedScores.slice(0, REQUIRED_ADJUDICATORS).map(function(s){ return s.totalScore; });
+        var avg = Math.round(rawScores.reduce(function(a,b){ return a+b; }, 0) / REQUIRED_ADJUDICATORS);
+        var lang  = score.language;
+        var cat   = score.category;
+        var level = score.level;
+        var pubKeyStr = lang+'__'+cat.replace(/[^a-zA-Z0-9]/g,'_')+'__'+level.replace(/[^a-zA-Z0-9]/g,'_');
+        var pubSnap = await publishedRef.child(pubKeyStr).once('value');
+        var existing = pubSnap.val();
+        if (existing && existing.results) {
+          var results = existing.results;
+          var keys = Object.keys(results);
+          var slotKey = keys.find(function(k){ return results[k].entryId === score.entryId; });
+          if (slotKey !== undefined) {
+            results[slotKey].totalScore  = avg;
+            results[slotKey].rawScores   = rawScores;
+            results[slotKey].grade       = getGrade(avg).label;
+            results[slotKey].editedAt    = Date.now();
+            results[slotKey].editedBy    = currentUName;
+            // Re-rank
+            var sorted = Object.values(results).sort(function(a,b){ return b.totalScore-a.totalScore; });
+            sorted.forEach(function(r,i){ r.rank = i+1; });
+            var reIndexed = {};
+            sorted.forEach(function(r,i){ reIndexed[String(i)] = r; });
+            await publishedRef.child(pubKeyStr).update({results: reIndexed, autoUpdatedAt: Date.now()});
+            toast('Score updated — published average recalculated to '+avg,'success');
+          } else {
+            toast('Score updated','success');
+          }
+        } else {
+          toast('Score updated','success');
+        }
+      } else {
+        toast('Score updated','success');
+      }
+    } else {
+      toast('Score updated','success');
+    }
+    closeEditModal();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+function closeEditModal() {
+  editingScoreId = null;
+  editCurrentScores = {};
+  var modal = document.getElementById('editModal');
+  modal.classList.add('hidden');
+  modal.style.display = 'none';
+}
 function exportCSV() {
   var headers = ['Entry No','Institution','Language','Category','Level','Work','Total Score','Grade','Date','Submitted By'];
   var rows    = allScores.map(function(s) {
@@ -1784,12 +2005,23 @@ async function publishSelected() {
   var key   = pubKey();
   var filtered = allScores.filter(function(s) { return s.language===lang && s.category===cat && s.level===level; });
   if (!filtered.length) { toast('No scores to publish', 'error'); return; }
+  var incomplete = Object.values(grouped).filter(function(g) { return g.scores.length < REQUIRED_ADJUDICATORS; });
+  if (incomplete.length > 0) {
+    var ok = confirm(incomplete.length+' entry/entries have fewer than '+REQUIRED_ADJUDICATORS+' adjudicator scores. Publish anyway with partial averages?');
+    if (!ok) return;
+  }
   var grouped = {};
   filtered.forEach(function(s) {
     var k = s.entryId || s.institution;
     if (!grouped[k]) grouped[k] = {scores:[], institution:s.institution, entryNo:s.entryNo, work:s.work, entryId:s.entryId};
     grouped[k].scores.push(s);
   });
+  var incomplete = Object.values(grouped).filter(function(g) { return g.scores.length < REQUIRED_ADJUDICATORS; });
+  if (incomplete.length > 0) {
+    var names = incomplete.map(function(g){ return g.institution||'Unknown'; }).join(', ');
+    var ok = confirm(incomplete.length+' entr'+(incomplete.length>1?'ies':'y')+' below '+REQUIRED_ADJUDICATORS+' adjudicators:\n\n'+names+'\n\nPublish anyway with partial averages?');
+    if (!ok) return;
+  }
   var results = {};
   Object.values(grouped)
     .sort(function(a,b) {
@@ -1801,21 +2033,25 @@ async function publishSelected() {
       var rawScores = g.scores.map(function(s){return s.totalScore;});
       var avg = Math.round(rawScores.reduce(function(x,y){return x+y;},0)/rawScores.length);
       var el = document.getElementById('adv-'+g.entryId);
-      results[String(i)] = {
+   results[String(i)] = {
         rank:         i+1,
-        institution:  g.institution,
-        entryNo:      g.entryNo,
-        work:         g.work,
+        institution:  g.institution || '',
+        entryNo:      g.entryNo || '',
+        work:         g.work || '',
         totalScore:   avg,
-        rawScores,
-        adjudicators: g.scores.map(function(s){return s.submittedBy;}).join(', '),
+        rawScores:    rawScores,
+        adjudicators: g.scores.map(function(s){return s.submittedBy||'';}).join(', '),
         grade:        getGrade(avg).label,
         position:     '',
         advance:      el ? el.checked : false,
-        entryId:      g.entryId
+        entryId:      g.entryId || '',
+        performer:    g.scores[0] ? (g.scores[0].performer || '') : '',
+        type:         g.scores[0] ? (g.scores[0].type || 'solo') : 'solo',
+        groupName:    g.scores[0] ? (g.scores[0].groupName || '') : '',
+        groupMembers: g.scores[0] ? (g.scores[0].groupMembers || '') : ''
       };
     });
-  await publishedRef.child(key).set({language:lang, category:cat, level, results, locked:true, publishedAt:Date.now(), publishedBy:currentUName});
+  await publishedRef.child(key).set({language:lang, category:cat, level, results, locked:true, autoLocked:false, publishedAt:Date.now(), publishedBy:currentUName});
   toast('Published: '+lang+' · '+cat+' · '+level+' 🌍','success');
   loadPublishView();
 }
@@ -1875,34 +2111,57 @@ function renderPublicLeaderboard() {
   allPublished.forEach(function(pub) {
     if (!pub.results) return;
     Object.values(pub.results).forEach(function(r) {
-      all.push(Object.assign({}, r, {language:pub.language, category:pub.category, level:pub.level}));
+      all.push(Object.assign({}, r, {language:pub.language, category:pub.category, level:pub.level, pubKey:pub.key}));
     });
   });
   all.sort(function(a,b) { return b.totalScore - a.totalScore; });
   var top = all.slice(0, 15);
-  if (!top.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🏆</div><p>No results published yet</p></div>'; return; }
+  if (!top.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🏆</div><p>No results published yet. Check back soon.</p></div>'; return; }
   var medals = ['🥇','🥈','🥉'];
   var cols   = ['var(--gold)','#C0C0C0','#CD7F32'];
+  var bgCols = ['rgba(212,168,67,0.06)','rgba(192,192,192,0.06)','rgba(205,127,50,0.06)'];
   el.innerHTML = top.map(function(r, i) {
-    var g = getGrade(r.totalScore);
-    var circ = 2*Math.PI*30; var off = circ - (r.totalScore/100)*circ;
+    var g    = getGrade(r.totalScore);
+    var circ = 2*Math.PI*30;
+    var off  = circ - (r.totalScore/100)*circ;
+    // Performer line
+    var performerLine = r.type==='group' && r.groupName
+      ? '<div style="font-size:0.72rem;color:var(--gold);margin-top:2px;font-style:italic;">'+r.groupName+'</div>'
+      : r.type==='group' && r.groupMembers
+      ? '<div style="font-size:0.72rem;color:var(--muted);margin-top:2px;">'+r.groupMembers.split('\n').slice(0,3).join(' · ')+'</div>'
+      : r.performer
+      ? '<div style="font-size:0.72rem;color:var(--muted);margin-top:2px;font-style:italic;">'+r.performer+'</div>'
+      : '';
+    // Average breakdown
     var avgBreakdown = r.rawScores && r.rawScores.length > 1
-      ? '<div class="avg-breakdown" style="margin-top:4px">'
+      ? '<div class="avg-breakdown" style="margin-top:5px">'
         + r.rawScores.map(function(sc){return '<span class="avg-score-chip">'+sc+'</span>';}).join('<span class="avg-equals">+</span>')
         + '<span class="avg-equals">÷'+r.rawScores.length+'</span>'
         + '<span class="avg-result">= '+r.totalScore+'</span>'
         + '</div>'
       : '';
-    return '<div class="card" style="margin-bottom:0.7rem;padding:0.9rem 1.2rem">'
+    return '<div class="card" style="margin-bottom:0.6rem;padding:0.9rem 1.2rem;'+(i<3?'border-color:'+cols[i]+';background:'+bgCols[i]+';':'')+'">'
       + '<div style="display:flex;align-items:center;gap:1rem">'
-      +   '<div style="font-size:1.3rem;width:26px;text-align:center">'+(medals[i]||'<span class="mono" style="font-size:0.78rem;color:var(--muted)">#'+(i+1)+'</span>')+'</div>'
-      +   '<div class="prog-ring"><svg viewBox="0 0 70 70" width="64" height="64"><circle class="track" cx="35" cy="35" r="30"/><circle class="fill" cx="35" cy="35" r="30" stroke="'+(cols[i]||'var(--blue)')+'" stroke-dasharray="'+circ+'" stroke-dashoffset="'+off+'"/></svg><div class="lbl">'+r.totalScore+'</div></div>'
-      +   '<div style="flex:1">'
-      +     '<div style="font-weight:600;font-size:0.88rem">'+(r.institution||'—')+'</div>'
-      +     '<div style="font-size:0.68rem;color:var(--muted);margin-top:2px">'+r.language+' · '+r.category+' · '+r.level+'</div>'
+      +   '<div style="font-size:'+(i<3?'1.6':'1.1')+'rem;width:32px;text-align:center;flex-shrink:0;">'
+      +     (medals[i]||'<span class="mono" style="font-size:0.78rem;color:var(--muted)">#'+(i+1)+'</span>')
+      +   '</div>'
+      +   '<div class="prog-ring"><svg viewBox="0 0 70 70" width="64" height="64">'
+      +     '<circle class="track" cx="35" cy="35" r="30"/>'
+      +     '<circle class="fill" cx="35" cy="35" r="30" stroke="'+(cols[i]||'var(--blue)')+'" stroke-dasharray="'+circ+'" stroke-dashoffset="'+off+'"/>'
+      +   '</svg><div class="lbl" style="color:'+(cols[i]||'var(--gold)')+'">'+r.totalScore+'</div></div>'
+      +   '<div style="flex:1;min-width:0;">'
+      +     '<div style="font-weight:700;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(r.institution||'—')+'</div>'
+      +     performerLine
+      +     '<div style="font-size:0.68rem;color:var(--muted);margin-top:3px;">'+r.language+' · '+r.category+' · '+r.level+'</div>'
+      +     '<div style="font-size:0.68rem;color:var(--muted);">'+( r.work ? '🎵 '+r.work : '')+'</div>'
       +     avgBreakdown
       +   '</div>'
-      +   '<div style="text-align:right"><span class="pill '+g.cls+'">'+r.totalScore+'/100</span>'+(r.advance?'<div class="pub-advance-tag" style="margin-top:4px">↑ Advances</div>':'')+'</div>'
+      +   '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">'
+      +     '<span class="pill '+g.cls+'" style="font-size:0.88rem;">'+r.totalScore+'/100</span>'
+      +     '<span style="font-size:0.68rem;color:var(--muted);">'+g.label+'</span>'
+      +     (r.advance ? '<span class="pub-advance-tag">↑ Advances</span>' : '')
+      +     '<button class="btn btn-ghost btn-sm" style="font-size:0.68rem;padding:3px 10px;" onclick="showCertificate(\''+encodeURIComponent(JSON.stringify(r))+'\',\''+r.language+'\',\''+r.category+'\',\''+r.level+'\')">🏅 Cert</button>'
+      +   '</div>'
       + '</div>'
       + '</div>';
   }).join('');
@@ -1966,6 +2225,9 @@ function showCertificate(enc, language, category, level) {
     + '<div class="title">Certificate of '+(r.advance?'Excellence':'Achievement')+'</div>'
     + '<div class="to">This certificate is proudly presented to</div>'
     + '<div class="name">'+(r.institution||'—')+'</div>'
+    + (r.type==='group' && r.groupName ? '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:#5a4010;margin-bottom:4px;position:relative;z-index:1;font-style:italic;">'+r.groupName+'</div>' : '')
+    + (r.type==='group' && r.groupMembers ? '<div style="font-size:0.78rem;color:#666;margin-bottom:12px;position:relative;z-index:1;line-height:1.8;">'+r.groupMembers.split('\n').join(' &nbsp;·&nbsp; ')+'</div>' : '')
+    + (r.type==='solo' && r.performer ? '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:#5a4010;margin-bottom:12px;position:relative;z-index:1;font-style:italic;">'+r.performer+'</div>' : '')
     + '<div class="details"><strong>Category:</strong> '+language+' — '+category+'<br><strong>Work Presented:</strong> '+(r.work||'—')+'<br><strong>Entry Number:</strong> '+(r.entryNo||'—')+'</div>'
     + '<div class="score">'+r.totalScore+' / 100</div>'
     + '<div class="grade">'+g.label+'</div>'
@@ -1973,7 +2235,10 @@ function showCertificate(enc, language, category, level) {
     + (r.advance ? '<div class="advance">↑ Advancing to the Next Level</div>' : '')
     + (r.adjudicators ? '<div class="note">Adjudicated by: '+r.adjudicators+'</div>' : '')
     + '<div class="footer"><div class="sig">Chief Adjudicator</div><div style="font-size:0.72rem;color:#888">'+date+'</div><div class="sig">Festival Director</div></div>'
-    + '<div class="printbtn" style="margin-top:18px;position:relative;z-index:1;"><button onclick="window.print()" style="background:linear-gradient(135deg,#D4A843,#8C6A1A);color:#fff;border:none;padding:10px 30px;border-radius:8px;cursor:pointer;font-size:0.88rem;font-weight:700;font-family:Outfit,sans-serif;">🖨 Print Certificate</button></div>'
+    + '<div class="printbtn" style="margin-top:18px;position:relative;z-index:1;display:flex;gap:10px;justify-content:center;">'
+    + '<button onclick="window.print()" style="background:linear-gradient(135deg,#D4A843,#8C6A1A);color:#fff;border:none;padding:10px 28px;border-radius:8px;cursor:pointer;font-size:0.88rem;font-weight:700;font-family:Outfit,sans-serif;box-shadow:0 4px 14px rgba(212,168,67,0.3);">🖨 Print / Save PDF</button>'
+    + '<button onclick="window.close()" style="background:#f5f5f5;color:#555;border:1px solid #ddd;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:0.88rem;font-family:Outfit,sans-serif;">✕ Close</button>'
+    + '</div>'
     + '</div></body></html>');
   win.document.close();
 }
@@ -1988,46 +2253,77 @@ function printResults(pubKeyVal) {
   var date    = new Date().toLocaleDateString('en-KE',{day:'numeric',month:'long',year:'numeric'});
   var rows = results.map(function(r) {
     var avgDetail = r.rawScores && r.rawScores.length > 1
-      ? '<br><small style="color:#888">'+r.rawScores.join('+')+' ÷ '+r.rawScores.length+' = '+r.totalScore+' avg</small>'
+      ? '<br><small style="color:#666">'+r.rawScores.join(' + ')+' ÷ '+r.rawScores.length+' = '+r.totalScore+' avg</small>'
       : '';
-    var adv = r.advance ? '<span style="background:#D4A843;color:#fff;font-size:0.68rem;padding:2px 8px;border-radius:20px;">↑ Advances</span>' : '';
+    var performer = r.type==='group' && r.groupName ? r.groupName
+      : r.type==='group' && r.groupMembers ? r.groupMembers.split('\n').join(', ')
+      : r.performer ? r.performer : '—';
+    var adv = r.advance ? '<span style="background:#D4A843;color:#fff;font-size:0.68rem;padding:2px 8px;border-radius:20px;font-weight:700;">↑ Advances</span>' : '';
     return '<tr>'
-      + '<td>'+(medals[r.rank-1]||'#'+r.rank)+'</td>'
-      + '<td><strong>'+(r.institution||'—')+'</strong></td>'
+      + '<td style="font-size:1.1rem">'+(medals[r.rank-1]||'#'+r.rank)+'</td>'
+      + '<td><strong>'+(r.institution||'—')+'</strong><br><span style="color:#666;font-size:0.8rem">'+performer+'</span></td>'
       + '<td>'+(r.entryNo||'—')+'</td>'
       + '<td>'+(r.work||'—')+'</td>'
-      + '<td style="font-weight:700;color:#8C6A1A;">'+r.totalScore+'/100'+avgDetail+'</td>'
+      + '<td style="font-weight:700;color:#8C6A1A;font-size:1rem;">'+r.totalScore+'/100'+avgDetail+'</td>'
       + '<td>'+(r.grade||'—')+'</td>'
       + '<td style="font-size:0.73rem;color:#666;">'+(r.adjudicators||'—')+'</td>'
       + '<td>'+adv+'</td>'
       + '</tr>';
   }).join('');
-  var win = window.open('','_blank','width=1000,height=700');
-  win.document.write('<!DOCTYPE html><html><head><title>Results</title>'
-    + '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&family=Outfit:wght@400;600&display=swap" rel="stylesheet">'
-    + '<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:"Outfit",sans-serif;padding:40px;color:#111;}'
-    + '.hdr{text-align:center;border-bottom:3px solid #D4A843;padding-bottom:18px;margin-bottom:22px;}'
-    + 'h1{font-family:"Cormorant Garamond",serif;font-size:1.6rem;color:#8C6A1A;margin-bottom:4px;}'
-    + '.sub{font-size:0.82rem;color:#666;margin-bottom:5px;}'
-    + '.lock{display:inline-block;background:#f0fff4;border:1px solid #6ee7b7;color:#1a7a4a;font-size:0.72rem;padding:3px 12px;border-radius:20px;}'
-    + 'table{width:100%;border-collapse:collapse;font-size:0.86rem;margin-top:14px;}'
-    + 'th{text-align:left;padding:9px 12px;background:#D4A843;color:#fff;font-weight:600;}'
-    + 'td{padding:9px 12px;border-bottom:1px solid #eee;vertical-align:middle;}'
+  var win = window.open('','_blank','width=1050,height=750');
+  win.document.write('<!DOCTYPE html><html><head><title>KMF Results — '+pub.language+' '+pub.category+'</title>'
+    + '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">'
+    + '<style>'
+    + '*{margin:0;padding:0;box-sizing:border-box;}'
+    + 'body{font-family:"Outfit",sans-serif;padding:40px;color:#111;background:#fff;}'
+    + '.hdr{text-align:center;border-bottom:3px solid #D4A843;padding-bottom:20px;margin-bottom:24px;}'
+    + '.logo{font-size:2rem;margin-bottom:6px;}'
+    + 'h1{font-family:"Cormorant Garamond",serif;font-size:1.8rem;color:#8C6A1A;margin-bottom:5px;}'
+    + '.meta{font-size:0.82rem;color:#666;margin-bottom:4px;}'
+    + '.lock-tag{display:inline-block;background:#f0fff4;border:1px solid #6ee7b7;color:#1a7a4a;font-size:0.72rem;font-weight:600;padding:3px 14px;border-radius:20px;margin-top:6px;}'
+    + 'table{width:100%;border-collapse:collapse;font-size:0.88rem;margin-top:6px;}'
+    + 'th{text-align:left;padding:10px 12px;background:#D4A843;color:#fff;font-weight:600;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;}'
+    + 'td{padding:10px 12px;border-bottom:1px solid #eee;vertical-align:middle;}'
     + 'tr:nth-child(even) td{background:#FFFDF5;}'
-    + '.footer{margin-top:22px;display:flex;justify-content:space-between;font-size:0.72rem;color:#888;border-top:1px solid #eee;padding-top:10px;}'
-    + '.sig{border-top:1px solid #bbb;width:155px;padding-top:5px;text-align:center;margin-top:42px;font-size:0.72rem;color:#666;}'
-    + '@media print{.pbtn{display:none!important;}}</style></head><body>'
-    + '<div class="hdr"><div style="font-size:1.8rem;margin-bottom:4px;">🎵</div><h1>Kenya Music Festival — Official Results</h1>'
-    + '<div class="sub">'+pub.language+' &middot; '+pub.category+' &middot; '+pub.level+'</div>'
-    + '<div class="sub">Published '+date+'</div>'
-    + '<div class="lock">🔒 Official · Averaged from '+REQUIRED_ADJUDICATORS+' adjudicators</div></div>'
-    + '<table><thead><tr><th>Rank</th><th>Institution</th><th>Entry</th><th>Work</th><th>Score (Avg)</th><th>Grade</th><th>Adjudicators</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table>'
-    + '<div class="footer"><span>Kenya Music Festival &middot; Official Results &middot; '+date+'</span><span>'+pub.language+' &middot; '+pub.category+' &middot; '+pub.level+'</span></div>'
-    + '<div style="display:flex;justify-content:space-between;margin-top:48px;"><div class="sig">Chief Adjudicator</div><div class="sig">Festival Director</div><div class="sig">Date</div></div>'
-    + '<div class="pbtn" style="margin-top:18px;text-align:center;"><button onclick="window.print()" style="background:#D4A843;color:#fff;border:none;padding:10px 28px;border-radius:7px;cursor:pointer;font-weight:600;font-size:0.88rem;">🖨 Print</button></div>'
+    + 'tr:first-child td{background:#fff9ec;}'
+    + '.footer{margin-top:24px;display:flex;justify-content:space-between;font-size:0.72rem;color:#888;border-top:1px solid #eee;padding-top:10px;}'
+    + '.sigs{display:flex;justify-content:space-between;margin-top:56px;}'
+    + '.sig{border-top:1px solid #bbb;width:170px;padding-top:6px;text-align:center;font-size:0.72rem;color:#555;}'
+    + '.pbtn{margin-top:20px;text-align:center;}'
+    + '@media print{'
+    + '  .pbtn{display:none!important;}'
+    + '  body{padding:20px;}'
+    + '  tr{break-inside:avoid;}'
+    + '}'
+    + '</style></head><body>'
+    + '<div class="hdr">'
+    +   '<div class="logo">🎵</div>'
+    +   '<h1>Kenya Music Festival — Official Results</h1>'
+    +   '<div class="meta"><strong>'+pub.language+'</strong> &nbsp;·&nbsp; <strong>'+pub.category+'</strong> &nbsp;·&nbsp; <strong>'+pub.level+'</strong></div>'
+    +   '<div class="meta">Published: '+date+'</div>'
+    +   '<div class="lock-tag">🔒 Official &nbsp;·&nbsp; Averaged from '+REQUIRED_ADJUDICATORS+' adjudicators &nbsp;·&nbsp; Auto-locked</div>'
+    + '</div>'
+    + '<table>'
+    +   '<thead><tr><th>Rank</th><th>Institution / Performer</th><th>Entry</th><th>Work</th><th>Avg Score</th><th>Grade</th><th>Adjudicators</th><th>Status</th></tr></thead>'
+    +   '<tbody>'+rows+'</tbody>'
+    + '</table>'
+    + '<div class="footer">'
+    +   '<span>Kenya Music Festival &nbsp;·&nbsp; Official Results &nbsp;·&nbsp; '+date+'</span>'
+    +   '<span>'+pub.language+' &nbsp;·&nbsp; '+pub.category+' &nbsp;·&nbsp; '+pub.level+'</span>'
+    + '</div>'
+    + '<div class="sigs">'
+    +   '<div class="sig">Chief Adjudicator</div>'
+    +   '<div class="sig">Festival Director</div>'
+    +   '<div class="sig">Date &amp; Stamp</div>'
+    + '</div>'
+    + '<div class="pbtn">'
+    +   '<button onclick="window.print()" style="background:linear-gradient(135deg,#D4A843,#8C6A1A);color:#fff;border:none;padding:11px 32px;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.9rem;font-family:Outfit,sans-serif;box-shadow:0 4px 14px rgba(212,168,67,0.3);">🖨 Print / Save as PDF</button>'
+    +   '&nbsp;&nbsp;'
+    +   '<button onclick="window.close()" style="background:#f5f5f5;color:#555;border:1px solid #ddd;padding:11px 24px;border-radius:8px;cursor:pointer;font-size:0.9rem;font-family:Outfit,sans-serif;">✕ Close</button>'
+    + '</div>'
     + '</body></html>');
   win.document.close();
-}
+  
 
 // ══════════════════════════════════════════
 // TOAST
