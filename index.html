@@ -2184,16 +2184,15 @@ function renderUsers() {
 async function deleteUser(uid) { if (!confirm('Remove this user?')) return; await usersRef.child(uid).remove(); toast('User removed','info'); }
 
 // ══════════════════════════════════════════
-// CERTIFICATES
+/// CERTIFICATES
 function showCertificate(enc, language, category, level) {
   var r    = JSON.parse(decodeURIComponent(enc));
   var g    = getGrade(r.totalScore);
   var date = new Date().toLocaleDateString('en-KE',{day:'numeric',month:'long',year:'numeric'});
   var avgNote = r.rawScores && r.rawScores.length > 1
-    ? 'Average of '+r.rawScores.length+' adjudicators: '+r.rawScores.join(' + ')+' ÷ '+r.rawScores.length+' = '+r.totalScore
+    ? 'Average of '+r.rawScores.length+' adjudicators: '+r.rawScores.join(' + ')+' \u00F7 '+r.rawScores.length+' = '+r.totalScore
     : '';
 
-  // Derive position from rank if not explicitly set
   var posLabel = r.position || '';
   if (!posLabel && r.rank) {
     var ordinals = {1:'1st Place',2:'2nd Place',3:'3rd Place'};
@@ -2202,112 +2201,177 @@ function showCertificate(enc, language, category, level) {
   var medalEmoji = {1:'🥇',2:'🥈',3:'🥉'};
   var medal = r.rank && medalEmoji[r.rank] ? medalEmoji[r.rank] : '';
 
-  var win = window.open('','_blank','width=900,height=750');
+  var win = window.open('','_blank','width=720,height=1020');
   win.document.write('<!DOCTYPE html><html><head><title>Certificate</title>'
-    + '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,700;0,900;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">'
-    + '<style>'
-    + '*{margin:0;padding:0;box-sizing:border-box;}'
-    + 'body{background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:"Outfit",sans-serif;padding:20px;}'
-    + '.cert-wrap{position:relative;width:800px;min-height:580px;}'
-    + '.cert{width:100%;min-height:580px;padding:56px 68px 48px;text-align:center;background:#FFFDF5;position:relative;z-index:1;}'
-    + '.f-top,.f-bottom{position:absolute;left:0;right:0;display:flex;flex-direction:column;z-index:2;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-    + '.f-top{top:0;} .f-bottom{bottom:0;}'
-    + '.f-left,.f-right{position:absolute;top:0;bottom:0;display:flex;flex-direction:row;z-index:2;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-    + '.f-left{left:0;} .f-right{right:0;}'
-    + '.f-top .s1,.f-bottom .s1{height:18px;background:#1a1a1a!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-    + '.f-top .s2,.f-bottom .s2{height:4px;background:#fff!important;}'
-    + '.f-top .s3,.f-bottom .s3{height:20px;background:#BB0000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-    + '.f-top .s4,.f-bottom .s4{height:4px;background:#fff!important;}'
-    + '.f-top .s5,.f-bottom .s5{height:14px;background:#006600!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-    + '.f-left .s1,.f-right .s1{width:18px;background:#1a1a1a!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-    + '.f-left .s2,.f-right .s2{width:4px;background:#fff!important;}'
-    + '.f-left .s3,.f-right .s3{width:20px;background:#BB0000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-    + '.f-left .s4,.f-right .s4{width:4px;background:#fff!important;}'
-    + '.f-left .s5,.f-right .s5{width:14px;background:#006600!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-    + '.fest{font-family:"Cormorant Garamond",serif;font-size:1.4rem;color:#006600;}'
-    + '.lvl{display:inline-block;background:#BB0000!important;color:#fff!important;font-size:0.65rem;font-weight:700;padding:3px 14px;border-radius:20px;text-transform:uppercase;letter-spacing:0.1em;margin:10px 0 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-    + '.title{font-family:"Cormorant Garamond",serif;font-size:2.5rem;color:#BB0000;margin-bottom:6px;}'
-    + '.to{font-size:0.78rem;color:#888;text-transform:uppercase;letter-spacing:0.15em;margin-bottom:5px;}'
-    + '.name{font-family:"Cormorant Garamond",serif;font-size:1.9rem;color:#111;border-bottom:2px solid #BB0000;display:inline-block;padding:0 24px 5px;margin:5px 0 14px;}'
-    + '.details{font-size:0.87rem;color:#444;line-height:2.1;margin:8px 0;}'
-    + '.score{display:inline-block;background:#006600!important;color:#fff!important;font-size:2rem;font-weight:700;padding:11px 36px;border-radius:10px;margin:14px 0 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-    + '.grade{font-size:0.92rem;color:#006600;font-weight:700;margin-bottom:6px;}'
++'<link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Cinzel:wght@700;800;900&family=Playfair+Display:ital,wght@0,700;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=Dancing+Script:wght@600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">'
++'<style>'
++'*{margin:0;padding:0;box-sizing:border-box;}'
++'@page{size:A4 portrait;margin:0;}'
++'body{background:#6B5A3E;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100vh;font-family:\'Outfit\',sans-serif;padding:12px 10px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++'.outer-frame{width:680px;background:linear-gradient(135deg,#FFD95A 0%,#C9A84C 15%,#E8D5A3 30%,#C9A84C 45%,#A07830 55%,#C9A84C 65%,#E8D5A3 78%,#C9A84C 88%,#8B6914 100%);padding:8px;border-radius:6px;box-shadow:0 12px 50px rgba(0,0,0,0.65),inset 0 0 25px rgba(201,168,76,0.5);}'
++'.cert{background:linear-gradient(160deg,#FDFAF0 0%,#F9F5E8 40%,#F5F0DF 100%);width:100%;position:relative;overflow:hidden;border-radius:3px;}'
++'.cert::before{content:"";position:absolute;top:8px;left:8px;right:8px;bottom:8px;border:2px solid #C9A84C;pointer-events:none;z-index:5;}'
++'.cert::after{content:"";position:absolute;top:16px;left:16px;right:16px;bottom:16px;border:1px solid #E8D5A3;pointer-events:none;z-index:5;}'
++'.stripe-bar{display:flex;height:44px;width:100%;position:relative;overflow:hidden;}'
++'.stripe-bar .s-black{flex:1;background:#1a1a1a !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++'.stripe-bar .s-red{flex:1;background:#BB0000 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++'.stripe-bar .s-white{flex:1;background:#FFFDF5 !important;}'
++'.stripe-bar .s-green{flex:1;background:#006600 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++'.stripe-bar::before{content:"";position:absolute;top:0;bottom:0;left:0;width:60px;background:linear-gradient(135deg,#1a1a1a 25%,#FFFDF5 25% 35%,#BB0000 35% 65%,#FFFDF5 65% 75%,#006600 75%);z-index:4;}'
++'.stripe-bar::after{content:"";position:absolute;top:0;bottom:0;right:0;width:60px;background:linear-gradient(-135deg,#1a1a1a 25%,#FFFDF5 25% 35%,#BB0000 35% 65%,#FFFDF5 65% 75%,#006600 75%);z-index:4;}'
++'.stripe-bar .note-icon{position:absolute;top:50%;transform:translateY(-50%);font-size:1.5rem;color:#FFD700;text-shadow:1px 1px 4px rgba(0,0,0,0.6);z-index:10;}'
++'.stripe-bar .note-icon.left{left:16px;}'
++'.stripe-bar .note-icon.right{right:16px;}'
++'.side-stripes{position:absolute;top:44px;bottom:44px;width:26px;display:flex;flex-direction:row;z-index:2;}'
++'.side-stripes.left{left:0;}'
++'.side-stripes.right{right:0;}'
++'.side-stripes .s-black{flex:1;background:#1a1a1a !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++'.side-stripes .s-red{flex:1;background:#BB0000 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++'.side-stripes .s-white{flex:1;background:#FFFDF5 !important;}'
++'.side-stripes .s-green{flex:1;background:#006600 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++'.watermark{opacity:.09;position:absolute;color:#8C6A1A;pointer-events:none;z-index:1;line-height:1;}'
++'.wm-harp{bottom:100px;left:10px;font-size:5.5rem;}'
++'.wm-guitar{top:80px;right:8px;font-size:4.5rem;}'
++'.wm-trumpet{bottom:170px;right:14px;font-size:3.8rem;}'
++'.wm-drum{bottom:75px;right:45px;font-size:4rem;}'
++'.wm-notes{top:50px;left:40px;font-size:3.5rem;}'
++'.content{padding:18px 62px 22px;text-align:center;position:relative;z-index:3;}'
++'.crest-wrap{margin:0 auto 4px;display:inline-block;}'
++'.crest{width:115px;height:115px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#FFD95A,#D4A843 45%,#8C6A1A 80%,#5A3E0A);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 24px rgba(140,106,26,0.55),inset 0 2px 4px rgba(255,255,255,0.35),inset 0 -2px 6px rgba(0,0,0,0.2);margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++'.crest svg{width:80px;height:80px;}'
++'.festival-name{font-family:\'Cinzel\',serif;font-size:1.2rem;font-weight:800;color:#006600;letter-spacing:0.12em;text-transform:uppercase;margin-top:6px;}'
++'.level-ribbon{display:inline-block;background:linear-gradient(135deg,#CC0000,#8B0000) !important;color:#fff !important;font-family:\'Cinzel\',serif;font-size:0.58rem;font-weight:700;padding:3px 18px;border-radius:20px;text-transform:uppercase;letter-spacing:0.14em;margin:6px 0 10px;box-shadow:0 2px 8px rgba(139,0,0,0.4);-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++'.cert-title{font-family:\'UnifrakturMaguntia\',cursive;font-size:2.6rem;color:#8B0000;text-shadow:2px 2px 4px rgba(0,0,0,.12);margin-bottom:10px;line-height:1.1;}'
++'.presented-to{font-family:\'Crimson Pro\',serif;font-size:0.78rem;color:#888;font-style:italic;letter-spacing:0.06em;margin-bottom:4px;}'
++'.institution{font-family:\'Playfair Display\',serif;font-size:1.8rem;font-weight:700;color:#111;border-bottom:2px solid #BB0000;display:inline-block;padding:0 28px 5px;margin:3px 0 12px;}'
++'.group-name{font-family:\'Playfair Display\',serif;font-size:1rem;color:#004400;font-style:italic;margin-bottom:3px;}'
++'.group-members{font-size:0.74rem;color:#666;margin-bottom:8px;line-height:1.7;}'
++'.performer-name{font-family:\'Playfair Display\',serif;font-size:1rem;color:#004400;font-style:italic;margin-bottom:8px;}'
++'.details{font-family:\'Crimson Pro\',serif;font-size:0.88rem;color:#333;line-height:2.0;margin-bottom:10px;}'
++'.details strong{color:#111;font-weight:700;}'
++'.score-wrap{margin:6px 0 3px;}'
++'.score{display:inline-block;background:linear-gradient(180deg,#0d9150 0%,#0a7a42 20%,#006600 55%,#004d00 100%) !important;color:#fff !important;font-family:\'Cinzel\',serif;font-size:2.2rem;font-weight:800;padding:11px 52px;border-radius:12px;border:4px solid #C9A84C;box-shadow:0 6px 18px rgba(0,0,0,.28),inset 0 2px 6px rgba(255,255,255,.22),0 0 0 5px rgba(201,168,76,0.15);letter-spacing:0.04em;}'
++'.grade{font-family:\'Outfit\',sans-serif;font-size:0.82rem;color:#444;margin:5px 0 6px;letter-spacing:0.1em;text-transform:uppercase;font-weight:500;}'
++'.medal-wrap{margin:4px 0 6px;}'
++'.medal-container{position:relative;display:inline-block;padding-top:16px;}'
++'.medal-ribbon{position:absolute;top:-12px;left:50%;transform:translateX(-50%);width:26px;height:16px;background:linear-gradient(to right,#1a1a1a 0% 33%,#BB0000 33% 50%,#fff 50% 67%,#006600 67% 100%) !important;clip-path:polygon(0 0,100% 0,85% 100%,50% 80%,15% 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++'.medal-img{width:90px;height:90px;background:radial-gradient(circle at 32% 28%,#FFF5B0 0%,#FFD95A 18%,#D4A843 45%,#8C6A1A 75%,#5A3E0A 100%) !important;border-radius:50%;border:4px solid #E8D5A3;box-shadow:0 6px 20px rgba(0,0,0,0.4),inset 0 3px 6px rgba(255,255,255,0.35),0 0 0 2px #8B6914;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++'.medal-img::before{content:"";position:absolute;width:74px;height:74px;border-radius:50%;border:1.5px solid rgba(139,105,26,0.5);top:50%;left:50%;transform:translate(-50%,-50%);}'
++'.medal-text{font-family:\'Cinzel\',serif;font-weight:800;color:#3A2500;text-shadow:0 1px 2px rgba(255,220,100,0.6);line-height:1;display:flex;flex-direction:column;align-items:center;z-index:1;}'
++'.medal-text .rank-num{font-size:1.4rem;font-weight:900;}'
++'.medal-text .rank-sup{font-size:0.6rem;vertical-align:super;}'
++'.avg-chip{display:inline-flex;align-items:center;gap:5px;background:#f0fff0 !important;border:1px solid #006600;border-radius:8px;padding:3px 12px;font-size:0.68rem;color:#004400;margin-bottom:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++'.advance{display:inline-block;background:rgba(0,102,0,0.09) !important;border:1px solid rgba(0,102,0,0.35);color:#006600;font-family:\'Cinzel\',serif;font-size:0.68rem;font-weight:700;padding:4px 14px;border-radius:20px;margin-bottom:5px;letter-spacing:0.06em;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++'.adjudicator-note{font-size:0.7rem;color:#888;margin:3px 0 6px;font-style:italic;}'
++'.sig-footer{margin-top:14px;padding-top:12px;border-top:1px solid rgba(187,0,0,0.25);display:flex;justify-content:space-between;align-items:flex-end;}'
++'.sig-block{text-align:center;width:180px;}'
++'.sig-script{font-family:\'Dancing Script\',cursive;font-size:1.1rem;color:#222;display:block;margin-bottom:1px;}'
++'.sig-line{border-top:1.5px solid #aaa;margin:4px auto 3px;width:88%;}'
++'.sig-name{font-family:\'Cinzel\',serif;font-size:0.65rem;color:#444;font-weight:700;letter-spacing:0.06em;}'
++'.sig-role{font-size:0.6rem;color:#888;margin-top:1px;}'
++'.sig-date{font-family:\'Crimson Pro\',serif;font-size:0.68rem;color:#888;font-style:italic;margin:0 auto;padding-top:8px;}'
++'@media print{'
++'body{background:#6B5A3E !important;padding:0 !important;justify-content:center;}'
++'.outer-frame{width:100%;max-width:710px;box-shadow:none;}'
++'.outer-frame,.cert,*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important;}'
++'.score{background:linear-gradient(180deg,#0d9150,#006600,#004d00) !important;color:#fff !important;}'
++'.level-ribbon{background:linear-gradient(135deg,#CC0000,#8B0000) !important;color:#fff !important;}'
++'.stripe-bar .s-black,.side-stripes .s-black{background:#1a1a1a !important;}'
++'.stripe-bar .s-red,.side-stripes .s-red{background:#BB0000 !important;}'
++'.stripe-bar .s-green,.side-stripes .s-green{background:#006600 !important;}'
++'.medal-img{background:radial-gradient(circle at 32% 28%,#FFF5B0,#FFD95A 18%,#D4A843 45%,#8C6A1A 75%,#5A3E0A 100%) !important;}'
++'.printbtn{display:none !important;}'
++'}'
++'</style></head><body>'
 
-    /* ── Position badge ── */
-    + '.position-wrap{margin:10px 0 10px;}'
-    + '.position-badge{'
-    +   'display:inline-flex;align-items:center;gap:10px;'
-    +   'background:linear-gradient(135deg,#D4A843,#8C6A1A)!important;'
-    +   'color:#fff!important;'
-    +   'font-family:"Cormorant Garamond",serif;'
-    +   'font-size:1.35rem;font-weight:700;'
-    +   'padding:8px 28px;border-radius:40px;'
-    +   'letter-spacing:0.04em;'
-    +   'box-shadow:0 3px 14px rgba(140,106,26,0.35);'
-    +   '-webkit-print-color-adjust:exact;print-color-adjust:exact;'
-    + '}'
-    + '.position-badge .medal{font-size:1.5rem;}'
-
-    + '.avg-chip{display:inline-flex;align-items:center;gap:6px;background:#f0fff0!important;border:1px solid #006600;border-radius:8px;padding:5px 14px;font-size:0.73rem;color:#004400;margin-bottom:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-    + '.advance{display:inline-block;background:rgba(0,102,0,0.12)!important;border:1px solid rgba(0,102,0,0.35);color:#006600;font-size:0.75rem;font-weight:700;padding:4px 14px;border-radius:20px;margin-bottom:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-    + '.note{font-size:0.72rem;color:#888;margin:3px 0;}'
-    + '.footer{margin-top:26px;display:flex;justify-content:space-between;align-items:flex-end;padding-top:16px;border-top:1px solid rgba(187,0,0,0.2);}'
-    + '.sig{border-top:1px solid #bbb;width:165px;padding-top:5px;font-size:0.7rem;color:#666;text-align:center;}'
-    + '@media print{'
-    + '  body{background:#fff!important;}'
-    + '  .cert-wrap,.cert{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}'
-    + '  .f-top .s1,.f-bottom .s1,.f-left .s1,.f-right .s1{background:#1a1a1a!important;}'
-    + '  .f-top .s3,.f-bottom .s3,.f-left .s3,.f-right .s3{background:#BB0000!important;}'
-    + '  .f-top .s5,.f-bottom .s5,.f-left .s5,.f-right .s5{background:#006600!important;}'
-    + '  .score{background:#006600!important;color:#fff!important;}'
-    + '  .lvl{background:#BB0000!important;color:#fff!important;}'
-    + '  .position-badge{background:linear-gradient(135deg,#D4A843,#8C6A1A)!important;color:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}'
-    + '  .printbtn{display:none!important;}'
-    + '}'
-    + '</style></head><body>'
-
-    + '<div class="cert-wrap">'
-    + '<div class="f-top"><div class="s1"></div><div class="s2"></div><div class="s3"></div><div class="s4"></div><div class="s5"></div></div>'
-    + '<div class="f-bottom"><div class="s5"></div><div class="s4"></div><div class="s3"></div><div class="s2"></div><div class="s1"></div></div>'
-    + '<div class="f-left"><div class="s1"></div><div class="s2"></div><div class="s3"></div><div class="s4"></div><div class="s5"></div></div>'
-    + '<div class="f-right"><div class="s5"></div><div class="s4"></div><div class="s3"></div><div class="s2"></div><div class="s1"></div></div>'
-
-    + '<div class="cert">'
-    + '<div style="font-size:2.5rem;margin-bottom:6px;">🎵</div>'
-    + '<div class="fest">Kenya Music Festival</div>'
-    + '<div class="lvl">'+level+' Level</div>'
-    + '<div class="title">Certificate of '+(r.advance?'Excellence':'Achievement')+'</div>'
-    + '<div class="to">This certificate is proudly presented to</div>'
-    + '<div class="name">'+(r.institution||'—')+'</div>'
-    + (r.type==='group' && r.groupName ? '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:#004400;margin-bottom:4px;font-style:italic;">'+r.groupName+'</div>' : '')
-    + (r.type==='group' && r.groupMembers ? '<div style="font-size:0.78rem;color:#666;margin-bottom:12px;line-height:1.8;">'+r.groupMembers.split('\n').join(' &nbsp;·&nbsp; ')+'</div>' : '')
-    + (r.type==='solo' && r.performer ? '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:#004400;margin-bottom:12px;font-style:italic;">'+r.performer+'</div>' : '')
-    + '<div class="details"><strong>Category:</strong> '+language+' — '+category+'<br><strong>Work Presented:</strong> '+(r.work||'—')+'<br><strong>Entry Number:</strong> '+(r.entryNo||'—')+'</div>'
-    + '<div class="score">'+r.totalScore+' / 100</div>'
-    + '<div class="grade">'+g.label+'</div>'
-
-    /* ── Position badge — only shown if we have a position/rank ── */
-    + (posLabel
-        ? '<div class="position-wrap">'
-          + '<div class="position-badge">'
-          + (medal ? '<span class="medal">'+medal+'</span>' : '')
-          + '<span>'+posLabel+'</span>'
-          + '</div></div>'
-        : '')
-
-    + (avgNote ? '<div class="avg-chip" style="margin-top:8px;">🏅 '+avgNote+'</div>' : '')
-    + (r.advance ? '<div class="advance">↑ Advancing to the Next Level</div>' : '')
-    + (r.adjudicators ? '<div class="note">Adjudicated by: '+r.adjudicators+'</div>' : '')
-    + '<div class="footer"><div class="sig">Chief Adjudicator</div><div style="font-size:0.72rem;color:#888">'+date+'</div><div class="sig">Festival Director</div></div>'
-    + '</div>'
-    + '</div>'
-
-    + '<div class="printbtn" style="margin-top:18px;display:flex;gap:10px;justify-content:center;">'
-    + '<button onclick="window.print()" style="background:#BB0000;color:#fff;border:none;padding:10px 28px;border-radius:8px;cursor:pointer;font-size:0.88rem;font-weight:700;font-family:Outfit,sans-serif;">🖨 Print / Save PDF</button>'
-    + '<button onclick="window.close()" style="background:#f5f5f5;color:#555;border:1px solid #ddd;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:0.88rem;font-family:Outfit,sans-serif;">✕ Close</button>'
-    + '</div>'
-
-    + '</body></html>');
++'<div class="outer-frame"><div class="cert">'
++'<div class="stripe-bar">'
++'<div class="s-black"></div><div class="s-red"></div><div class="s-white"></div><div class="s-green"></div>'
++'<span class="note-icon left" aria-hidden="true">&#9834;</span>'
++'<span class="note-icon right" aria-hidden="true">&#9833;</span>'
++'</div>'
++'<div class="side-stripes left"><div class="s-black"></div><div class="s-red"></div><div class="s-white"></div><div class="s-green"></div></div>'
++'<div class="side-stripes right"><div class="s-green"></div><div class="s-white"></div><div class="s-red"></div><div class="s-black"></div></div>'
++'<div class="watermark wm-harp" aria-hidden="true">&#127927;</div>'
++'<div class="watermark wm-guitar" aria-hidden="true">&#127928;</div>'
++'<div class="watermark wm-trumpet" aria-hidden="true">&#127930;</div>'
++'<div class="watermark wm-drum" aria-hidden="true">&#129345;</div>'
++'<div class="watermark wm-notes" aria-hidden="true">&#127932;</div>'
++'<div class="content">'
++'<div class="crest-wrap"><div class="crest">'
++'<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">'
++'<path d="M40 6 L68 18 L68 42 Q68 62 40 74 Q12 62 12 42 L12 18 Z" fill="#FFFDF5" stroke="#DAA520" stroke-width="2"/>'
++'<clipPath id="sh"><path d="M40 6 L68 18 L68 42 Q68 62 40 74 Q12 62 12 42 L12 18 Z"/></clipPath>'
++'<g clip-path="url(#sh)">'
++'<rect x="12" y="6" width="56" height="14" fill="#1a1a1a"/>'
++'<rect x="12" y="20" width="56" height="14" fill="#BB0000"/>'
++'<rect x="12" y="34" width="56" height="6" fill="#FFFDF5"/>'
++'<rect x="12" y="40" width="56" height="14" fill="#006600"/>'
++'<rect x="12" y="54" width="56" height="20" fill="#1a1a1a"/>'
++'</g>'
++'<ellipse cx="40" cy="40" rx="9" ry="13" fill="#FFFDF5" stroke="#DAA520" stroke-width="1.5"/>'
++'<line x1="40" y1="27" x2="40" y2="53" stroke="#BB0000" stroke-width="2"/>'
++'<line x1="24" y1="14" x2="56" y2="66" stroke="#DAA520" stroke-width="1.5"/>'
++'<line x1="56" y1="14" x2="24" y2="66" stroke="#DAA520" stroke-width="1.5"/>'
++'<text x="19" y="46" font-size="10" fill="#DAA520" font-family="serif">&#9835;</text>'
++'<text x="53" y="46" font-size="10" fill="#DAA520" font-family="serif">&#9834;</text>'
++'<path d="M22 66 Q40 72 58 66" fill="#8B0000" stroke="none"/>'
++'<text x="40" y="71" font-size="5.5" fill="#fff" text-anchor="middle" font-family="Outfit,sans-serif" font-weight="700" letter-spacing="0.5">'+level.toUpperCase()+' LEVEL</text>'
++'</svg>'
++'</div></div>'
++'<div class="festival-name">Kenya Music Festival</div>'
++'<div class="level-ribbon">'+level+' Level</div>'
++'<div class="cert-title">Certificate of '+(r.advance ? 'Excellence' : 'Achievement')+'</div>'
++'<div class="presented-to">This certificate is proudly presented to</div>'
++'<div class="institution">'+(r.institution || '&mdash;')+'</div>'
++(r.type === 'group' && r.groupName ? '<div class="group-name">'+r.groupName+'</div>' : '')
++(r.type === 'group' && r.groupMembers ? '<div class="group-members">'+r.groupMembers.split('\n').join(' &nbsp;&middot;&nbsp; ')+'</div>' : '')
++(r.type === 'solo' && r.performer ? '<div class="performer-name">'+r.performer+'</div>' : '')
++'<div class="details">'
++'<strong>Category:</strong> '+language+' &ndash; '+category+'<br>'
++'<strong>Work Presented:</strong> '+(r.work || '&mdash;')+'<br>'
++'<strong>Entry Number:</strong> '+(r.entryNo || '&mdash;')
++'</div>'
++'<div class="score-wrap"><div class="score">'+r.totalScore+' / 100</div></div>'
++'<div class="grade">'+g.label+'</div>'
++(posLabel
+  ? '<div class="medal-wrap"><div class="medal-container">'
+    +'<div class="medal-ribbon"></div>'
+    +'<div class="medal-img"><div class="medal-text">'
+    +'<span class="rank-num">'+r.rank+'<sup class="rank-sup">'+(r.rank===1?'st':r.rank===2?'nd':r.rank===3?'rd':'th')+'</sup></span>'
+    +'</div></div>'
+    +'</div></div>'
+  : '')
++(avgNote ? '<div class="avg-chip">&#127885; '+avgNote+'</div>' : '')
++(r.advance ? '<div class="advance">&#8593; Advancing to the Next Level</div>' : '')
++(r.adjudicators ? '<div class="adjudicator-note">Adjudicated by: '+r.adjudicators+'</div>' : '')
++'<div class="sig-footer">'
++'<div class="sig-block">'
++(r.chairmanSignature ? '<span class="sig-script">'+(r.chairmanName || 'Chairman')+'</span>' : '')
++'<div class="sig-line"></div>'
++'<div class="sig-name">'+(r.chairmanName || 'Prof. J. Onyango')+'</div>'
++'<div class="sig-role">Chairman</div>'
++'</div>'
++'<div class="sig-date">'+date+'</div>'
++'<div class="sig-block">'
++(r.adjudicatorSignature ? '<span class="sig-script">'+(r.adjudicatorName || 'Head Adjudicator')+'</span>' : '')
++'<div class="sig-line"></div>'
++'<div class="sig-name">'+(r.adjudicatorName || 'Ms. C. Wambui')+'</div>'
++'<div class="sig-role">Head Adjudicator</div>'
++'</div>'
++'</div>'
++'</div>'
++'<div class="stripe-bar">'
++'<div class="s-green"></div><div class="s-white"></div><div class="s-red"></div><div class="s-black"></div>'
++'<span class="note-icon left" aria-hidden="true">&#9835;</span>'
++'<span class="note-icon right" aria-hidden="true">&#9836;</span>'
++'</div>'
++'</div></div>'
++'<div class="printbtn" style="margin-top:16px;display:flex;gap:12px;justify-content:center;">'
++'<button onclick="window.print()" style="background:linear-gradient(135deg,#CC0000,#8B0000);color:#fff;border:none;padding:10px 28px;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:700;font-family:Outfit,sans-serif;box-shadow:0 3px 10px rgba(139,0,0,0.4);">&#128424; Print / Save PDF</button>'
++'<button onclick="window.close()" style="background:#f5f5f5;color:#555;border:1px solid #ddd;padding:10px 22px;border-radius:8px;cursor:pointer;font-size:0.85rem;font-family:Outfit,sans-serif;">&#10005; Close</button>'
++'</div>'
++'</body></html>');
   win.document.close();
 }
 
